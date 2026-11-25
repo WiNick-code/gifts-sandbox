@@ -1,0 +1,24 @@
+{
+  "document": { "type": "contract", "number": "Договор №42", "date": "2026-03-01" },
+  "terms": [
+    {
+      "id": "c003-base-5",
+      "title": "Договор №42: базовая скидка 5%",
+      "source": "contract",
+      "effect": { "type": "percent_off", "percent": 5 },
+      "scope": { "all": true },
+      "audience": { "customerIds": ["C-003"] },
+      "validFrom": "2026-03-01"
+    },
+    {
+      "id": "c003-notebooks-12",
+      "title": "Договор №42: ежедневники −12% от 300 шт.",
+      "source": "contract",
+      "effect": { "type": "percent_off", "percent": 12 },
+      "scope": { "categories": ["Ежедневники"] },
+      "audience": { "customerIds": ["C-003"] },
+      "validFrom": "2026-03-01",
+      "minQty": 300
+    }
+  ]
+}

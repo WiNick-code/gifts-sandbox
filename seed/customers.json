@@ -1,0 +1,8 @@
+[
+  { "id": "C-001", "name": "ООО «Агентство Альфа» (вымышл.)", "segment": "agency",
+    "payment": { "type": "deferral_limit", "days": 30, "limit": 500000 } },
+  { "id": "C-002", "name": "ИП Бета (вымышл.)", "segment": "reseller",
+    "payment": { "type": "prepay" } },
+  { "id": "C-003", "name": "АО «Гамма Корп» (вымышл.)", "segment": "corporate",
+    "payment": { "type": "deferral", "days": 45 } }
+]

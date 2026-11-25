@@ -1,0 +1,37 @@
+{
+  "document": { "type": "promo_order", "number": "Приказ об акциях НГ-2027", "date": "2026-11-10" },
+  "terms": [
+    {
+      "id": "promo-ny-15",
+      "title": "Новогодняя: −15% на категорию «Новый год»",
+      "source": "promo",
+      "effect": { "type": "percent_off", "percent": 15 },
+      "scope": { "categories": ["Новый год"] },
+      "audience": { "all": true },
+      "validFrom": "2026-11-15",
+      "validTo": "2026-12-31"
+    },
+    {
+      "id": "promo-mugs-volume",
+      "title": "Объёмная: кружки −20% от 500 шт.",
+      "source": "promo",
+      "effect": { "type": "percent_off", "percent": 20 },
+      "scope": { "categories": ["Кружки"] },
+      "audience": { "all": true },
+      "validFrom": "2026-11-01",
+      "validTo": "2026-11-30",
+      "minQty": 500
+    },
+    {
+      "id": "promo-agency-pens",
+      "title": "Агентствам: ещё −5% на ручки к договорной цене",
+      "source": "promo",
+      "base": "contract",
+      "effect": { "type": "percent_off", "percent": 5 },
+      "scope": { "categories": ["Ручки"] },
+      "audience": { "segments": ["agency"] },
+      "validFrom": "2026-11-20",
+      "validTo": "2026-12-15"
+    }
+  ]
+}

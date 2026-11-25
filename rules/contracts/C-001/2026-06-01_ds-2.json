@@ -1,0 +1,23 @@
+{
+  "document": { "type": "addendum", "number": "ДС-2 к договору №17", "date": "2026-06-01" },
+  "terms": [
+    {
+      "id": "c001-thermos-1190",
+      "title": "ДС-2: фикс. цена на термос «Норд»",
+      "source": "contract",
+      "effect": { "type": "fixed_price", "price": 1190 },
+      "scope": { "skus": ["TH-01"] },
+      "audience": { "customerIds": ["C-001"] },
+      "validFrom": "2026-06-01"
+    },
+    {
+      "id": "c001-pens-10",
+      "title": "ДС-2: скидка 10% на ручки",
+      "source": "contract",
+      "effect": { "type": "percent_off", "percent": 10 },
+      "scope": { "categories": ["Ручки"] },
+      "audience": { "customerIds": ["C-001"] },
+      "validFrom": "2026-06-01"
+    }
+  ]
+}

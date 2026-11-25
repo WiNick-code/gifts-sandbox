@@ -1,0 +1,14 @@
+{
+  "document": { "type": "contract", "number": "Договор №17", "date": "2026-01-15" },
+  "terms": [
+    {
+      "id": "c001-base-7",
+      "title": "Договор №17: базовая скидка 7%",
+      "source": "contract",
+      "effect": { "type": "percent_off", "percent": 7 },
+      "scope": { "all": true },
+      "audience": { "customerIds": ["C-001"] },
+      "validFrom": "2026-01-15"
+    }
+  ]
+}
