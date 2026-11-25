@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Песочница коммерческих условий</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@500;700&family=Red+Hat+Text:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE: рабочий инструмент отдела продаж — точный, спокойный, объясняющий.
+   IDEA: ценник с историей: каждая строка корзины — лестница «прайс → договор → итог».
+   PICTURE: корзина из ценовых лестниц, большой итог и выгода клиента рядом.
+   COLOUR and TYPE: оксфордский синий, белые панели, маджента для итоговой цены; Red Hat Display + Red Hat Text.
+   LAYOUT: синяя полоса с клиентом и датой; корзина слева, итог и запуск заказа справа; ниже — условия на дату. */
+:root{color-scheme:light dark;
+  --bg:light-dark(#f2f4f9,#070f26);--panel:light-dark(#fff,#0f1c3d);--ink:light-dark(#0b1f4b,#e8ecf7);
+  --muted:light-dark(#56617b,#9ba7c5);--line:light-dark(#dde2ee,#24335d);--track:light-dark(#e8ecf5,#1a2a55);
+  --band:light-dark(#0b1f4b,#0c1a3e);--accent:light-dark(#e0115f,#ff4d8d);--contract:light-dark(#2453c7,#7ea4ff);
+  --soft:light-dark(#fdeaf1,#3a1430)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Red Hat Text",system-ui,sans-serif;overflow-x:clip}
+h1,h2,h3,.big{font-family:"Red Hat Display",system-ui,sans-serif;font-weight:700;line-height:1.05;text-wrap:balance;margin:0}
+h1{font-size:clamp(30px,4.4vw,46px)}h2{font-size:24px;margin-bottom:14px}h3{font-size:17px}
+.band{padding:clamp(28px,4vw,56px) max(5vw,16px)}
+.wrap{max-width:1240px;margin:0 auto}
+header.band{background:var(--band);color:#fff}
+header p{color:#c5cfe8;max-width:64ch;margin:10px 0 22px}
+.ctrl{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:end}
+label.f{display:grid;gap:4px;font-size:13px;color:#c5cfe8}
+select,input{font:inherit;font-size:16px;min-height:44px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:8px 10px}
+header select,header input{border-color:#3a4f86;background:#13285c;color:#fff}
+header select{min-width:min(320px,100%)}
+button{font:inherit;font-weight:600;min-height:44px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:8px 14px;cursor:pointer}
+button:hover{border-color:var(--contract)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:44px;background:transparent;color:#fff;border-color:#3a4f86;font-weight:500;font-size:14px}
+.chip[aria-pressed=true]{background:#fff;color:#0b1f4b;border-color:#fff}
+.who{margin-top:18px;font-size:14px;color:#c5cfe8}.who b{color:#fff;font-weight:600}
+.main{display:grid;gap:24px;grid-template-columns:minmax(0,1fr)}
+@media(min-width:960px){.main{grid-template-columns:minmax(0,1fr) 360px}.side{position:sticky;top:16px;align-self:start}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:clamp(16px,2.4vw,24px)}
+.line{padding:18px 0;border-top:1px solid var(--line)}.line:first-of-type{border-top:0;padding-top:4px}
+.lh{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between}
+.lh .nm{font-weight:600}.sku{color:var(--muted);font-size:13px}
+.qty{display:flex;gap:6px;align-items:center}.qty input{width:96px;text-align:right}
+.x{min-width:44px;padding:0;color:var(--muted)}
+.ladder{position:relative;height:14px;border-radius:7px;background:var(--track);margin:14px 0 8px;overflow:hidden}
+.ladder i{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:7px;transition:width .35s ease}
+.ladder b{position:absolute;top:0;bottom:0;width:3px;background:var(--contract)}
+.nums{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;font-size:14px}
+.nums span{display:block;color:var(--muted);font-size:13px}.nums div{text-align:right;white-space:nowrap}
+.nums div:first-child{text-align:left}
+.nums .fin{color:var(--accent);font-weight:600}
+@media(max-width:520px){.nums{grid-template-columns:repeat(2,minmax(0,1fr))}.nums div:nth-child(3){text-align:left}}
+.badge{display:inline-block;font-size:13px;font-weight:600;border-radius:999px;padding:2px 10px;white-space:nowrap}
+.b-contract{background:color-mix(in srgb,var(--contract) 16%,transparent);color:var(--contract)}
+.b-promo{background:var(--soft);color:var(--accent)}
+.b-list{background:var(--track);color:var(--muted)}
+.applied{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin-top:8px;font-size:14px}
+.hint{margin-top:10px;font-size:14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--soft);border-radius:8px;padding:8px 12px}
+.hint button{min-height:36px;padding:4px 10px;font-size:14px}
+details{margin-top:10px}summary{cursor:pointer;color:var(--contract);font-size:14px;min-height:32px}
+.cand{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:6px;font-size:14px}
+.cand li{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:8px;align-items:baseline}
+.cand .p{white-space:nowrap;text-align:right}.cand small{display:block;color:var(--muted)}
+.ok{color:var(--accent);font-weight:700}.no{color:var(--muted)}
+.big{font-size:clamp(34px,4vw,44px);color:var(--accent);white-space:nowrap}
+.kv{display:flex;justify-content:space-between;gap:12px;font-size:15px;padding:4px 0}.kv b{white-space:nowrap}
+.side .panel+.panel{margin-top:16px}
+.primary{background:var(--accent);border-color:var(--accent);color:#fff;width:100%;margin-top:12px}
+.primary:hover{filter:brightness(1.08);border-color:var(--accent)}
+.order{border-top:1px solid var(--line);margin-top:14px;padding-top:12px;font-size:14px}
+.order .st{font-weight:600}.st-launched{color:var(--contract)}.st-awaiting_prepayment{color:#b7791f}.st-blocked_credit_limit{color:var(--accent)}
+.muted{color:var(--muted);font-size:14px}
+.cat{display:grid;gap:2px}.cat div{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border-top:1px solid var(--line);font-size:14px}
+.cat div:first-child{border-top:0}.cat button{min-height:40px;padding:4px 12px;white-space:nowrap}
+.empty{padding:28px 0;text-align:center;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-weight:600;color:var(--muted);font-size:13px;border-bottom:1px solid var(--line);padding:8px}
+td{border-bottom:1px solid var(--line);padding:10px 8px;vertical-align:top}
+tr.off td{color:var(--muted)}
+.issues{margin:0 0 14px;padding:10px 14px;border-radius:8px;background:var(--track);font-size:14px}
+.tg{display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:10px}.tg input{min-height:20px;width:20px}
+footer{color:var(--muted);font-size:14px}footer a{color:var(--contract)}
+.fig{position:relative;min-height:340px}.fig>svg,.fig>canvas{position:absolute;inset:0;width:100%;height:100%}
+pre,.scroll{overflow-x:auto}.scroll a{flex:none}code{overflow-wrap:anywhere}html{scroll-padding-top:72px}
+@media(max-width:600px){table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:8em;text-align:start}.stack td::before{content:attr(data-l);float:inline-start;width:7.5em;margin-inline-start:-8em;white-space:normal;color:var(--muted)}.stack td:empty{display:none}.stack tr{border-bottom:1px solid var(--line)}}
+@media(prefers-reduced-motion:reduce){.ladder i{transition:none}}
+</style><script>new MutationObserver(()=>{for(const c of document.querySelectorAll('.stack td:not([data-l])')){let i=0,p=c;while(p=p.previousElementSibling)i+=p.colSpan;c.dataset.l=c.closest('table').rows[0].cells[i]?.textContent||''}}).observe(document,{childList:true,subtree:true})</script>
+</head>
+<body>
+<header class="band"><div class="wrap">
+  <h1>Как складывается цена клиента</h1>
+  <p>Выберите клиента и дату — движок посчитает каждую строку корзины по договору, допсоглашениям и действующим акциям и объяснит, почему цена именно такая.</p>
+  <div class="ctrl">
+    <label class="f">Клиент<select id="cust"></select></label>
+    <label class="f">Дата расчёта<input id="date" type="date"></label>
+    <div class="chips" id="presets" role="group" aria-label="Быстрый выбор даты"></div>
+  </div>
+  <div class="who" id="who"></div>
+</div></header>
+
+<main class="band"><div class="wrap main">
+  <section class="panel" aria-labelledby="h-cart">
+    <h2 id="h-cart">Корзина</h2>
+    <div id="cart"></div>
+  </section>
+  <aside class="side">
+    <div class="panel">
+      <div class="muted">Итого к оплате</div>
+      <div class="big" id="total"></div>
+      <div id="sum" style="margin-top:10px"></div>
+      <div id="limitBox"></div>
+      <button class="primary" id="launch">Запустить заказ</button>
+      <div class="muted" style="margin-top:8px">При запуске проверяются условия оплаты, а цены фиксируются и больше не меняются.</div>
+      <div id="orders"></div>
+    </div>
+    <div class="panel">
+      <h3 style="margin-bottom:10px">Каталог</h3>
+      <div class="cat" id="cat"></div>
+    </div>
+  </aside>
+</div></main>
+
+<section class="band" style="padding-top:0"><div class="wrap panel">
+  <h2>Условия на <span id="tdate"></span></h2>
+  <div id="issues"></div>
+  <label class="tg"><input type="checkbox" id="onlyMine" checked> Только условия, адресованные выбранному клиенту</label>
+  <table class="stack"><thead><tr><th>Условие</th><th>Тип</th><th>Товары</th><th>Кому</th><th>Срок</th><th>Статус</th><th>Документ</th></tr></thead><tbody id="terms"></tbody></table>
+</div></section>
+
+<footer class="band" style="padding-top:0"><div class="wrap">
+  Клиенты, товары, цены и документы вымышленные. Код и правила — <a href="https://github.com/WiNick-code/gifts-sandbox">github.com/WiNick-code/gifts-sandbox</a>.
+</div></footer>
+
+<script>/*__ENGINE__*/</script>
+<script>
+{
+const DATA = /*__DATA__*/null;
+const catalog = {
+  products: new Map(DATA.products.map(p => [p.sku, p])),
+  customers: new Map(DATA.customers.map(c => [c.id, c])),
+  terms: DATA.terms,
+};
+const termById = new Map(DATA.terms.map(t => [t.id, t]));
+const $ = id => document.getElementById(id);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+const rub = n => formatRub(n);
+const fd = d => d ? d.split('-').reverse().join('.') : '';
+const SEG = { agency: 'агентства', reseller: 'дилеры', corporate: 'корпоративные' };
+const SRC = { contract: 'Договор', promo: 'Акция', list: 'Прайс' };
+const ST = { launched: 'Запущен', awaiting_prepayment: 'Ждёт предоплаты', blocked_credit_limit: 'Заблокирован: превышен лимит' };
+const PRESETS = [
+  ['2026-05-31', 'До ДС-2'],
+  ['2026-11-20', 'Объёмная на кружки'],
+  ['2026-12-01', 'Новогодние акции'],
+  ['2027-01-10', 'После акций'],
+];
+
+const state = {
+  customerId: 'C-001',
+  date: '2026-12-01',
+  cart: [{ sku: 'NY-01', qty: 10 }, { sku: 'TH-01', qty: 2 }, { sku: 'PEN-02', qty: 100 }, { sku: 'MUG-01', qty: 100 }],
+  debt: 120000,
+  orders: [],
+};
+
+const payText = p => p.type === 'prepay' ? '100% предоплата'
+  : p.type === 'deferral' ? `отсрочка ${p.days} дн.`
+  : `отсрочка ${p.days} дн., лимит ${rub(p.limit)}`;
+const scopeText = s => {
+  const parts = [];
+  if (s.all) parts.push('весь ассортимент');
+  if (s.categories?.length) parts.push(s.categories.map(c => `«${c}»`).join(', '));
+  if (s.skus?.length) parts.push(s.skus.map(k => catalog.products.get(k)?.name ?? k).join(', '));
+  if (s.excludeSkus?.length) parts.push('кроме ' + s.excludeSkus.join(', '));
+  return parts.join('; ');
+};
+const audText = a => a.all ? 'все клиенты' : [
+  ...(a.customerIds ?? []).map(id => catalog.customers.get(id)?.name ?? id),
+  ...(a.segments ?? []).map(s => 'сегмент: ' + (SEG[s] ?? s)),
+].join('; ');
+const docText = d => d ? `${d.number} от ${fd(d.date)}` : '—';
+
+// Шапка
+$('cust').innerHTML = DATA.customers.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
+$('presets').innerHTML = PRESETS.map(([d, l]) => `<button class="chip" data-d="${d}" aria-pressed="false">${esc(l)} · ${fd(d)}</button>`).join('');
+
+function render() {
+  const customer = catalog.customers.get(state.customerId);
+  $('cust').value = state.customerId;
+  $('date').value = state.date;
+  for (const b of $('presets').children) b.setAttribute('aria-pressed', String(b.dataset.d === state.date));
+  $('who').innerHTML = `Сегмент: <b>${esc(SEG[customer.segment] ?? customer.segment)}</b> · Оплата: <b>${esc(payText(customer.payment))}</b>`;
+
+  const priced = priceCart(catalog, state.customerId, state.cart, state.date);
+
+  // Корзина
+  $('cart').innerHTML = priced.lines.length ? priced.lines.map((l, i) => {
+    const w = l.listPrice ? (l.unitPrice / l.listPrice) * 100 : 100;
+    const cw = l.listPrice ? (l.contractPrice / l.listPrice) * 100 : 100;
+    const hints = l.candidates.filter(c => c.status === 'not_eligible').map(c => {
+      const t = termById.get(c.termId);
+      const need = (t?.minQty ?? 0) - l.qty;
+      return `<div class="hint"><span>До «${esc(c.title)}» не хватает ${need} шт.</span><button data-act="setqty" data-i="${i}" data-q="${t?.minQty}">Довести до ${t?.minQty} шт.</button></div>`;
+    }).join('');
+    const cands = l.candidates.filter(c => c.status !== 'not_eligible').map(c => `
+      <li><span class="${c.status === 'applied' ? 'ok' : 'no'}">${c.status === 'applied' ? '✔' : '·'}</span>
+        <span>${esc(c.title)}<small>${esc(c.reason)}${c.document ? ' · ' + esc(docText(c.document)) : ''}</small></span>
+        <span class="p">${c.unitPrice == null ? '' : esc(rub(c.unitPrice))}</span></li>`).join('');
+    return `<div class="line">
+      <div class="lh"><div><div class="nm">${esc(l.name)}</div><div class="sku">${esc(l.sku)} · ${esc(catalog.products.get(l.sku).category)}</div></div>
+        <div class="qty"><input type="number" min="1" step="1" inputmode="numeric" value="${l.qty}" data-act="qty" data-i="${i}" aria-label="Количество, шт."><span class="muted">шт.</span>
+        <button class="x" data-act="del" data-i="${i}" aria-label="Убрать из корзины">✕</button></div></div>
+      <div class="ladder" aria-hidden="true"><i style="width:${w.toFixed(2)}%"></i>${cw < 99.9 ? `<b style="left:calc(${cw.toFixed(2)}% - 1.5px)"></b>` : ''}</div>
+      <div class="nums">
+        <div><span>Прайс</span>${esc(rub(l.listPrice))}</div>
+        <div><span>Договор</span>${esc(rub(l.contractPrice))}</div>
+        <div><span>Итог за шт.</span><span class="fin" style="color:var(--accent);font-size:inherit">${esc(rub(l.unitPrice))}</span></div>
+        <div><span>Сумма</span><b>${esc(rub(l.total))}</b></div>
+      </div>
+      <div class="applied"><span class="badge b-${l.applied.source}">${SRC[l.applied.source]}</span><span>${esc(l.applied.title)}</span></div>
+      ${hints}
+      <details><summary>Почему такая цена</summary><ul class="cand">${cands}</ul></details>
+    </div>`;
+  }).join('') : '<div class="empty">Корзина пуста — добавьте товары из каталога.</div>';
+
+  // Итог
+  $('total').textContent = rub(priced.total);
+  const pct = priced.listTotal ? (priced.savings / priced.listTotal * 100).toLocaleString('ru-RU', { maximumFractionDigits: 1 }) : '0';
+  $('sum').innerHTML = `<div class="kv"><span>По прайсу</span><b>${esc(rub(priced.listTotal))}</b></div>
+    <div class="kv"><span>Выгода клиента</span><b style="color:var(--accent)">${esc(rub(priced.savings))} · ${pct}%</b></div>`;
+  const lim = customer.payment.type === 'deferral_limit';
+  if (!lim) $('limitBox').innerHTML = '';
+  else if (!$('debt')) $('limitBox').innerHTML = `<label class="f" style="color:var(--muted);margin-top:10px">Текущая задолженность клиента, ₽<input id="debt" type="number" min="0" step="1000" inputmode="numeric" value="${state.debt}"></label>`;
+  $('launch').disabled = !state.cart.length;
+
+  // Запущенные заказы: снимок цен против текущего пересчёта
+  $('orders').innerHTML = state.orders.map(o => {
+    const now = priceCart(catalog, o.customerId, o.lines.map(l => ({ sku: l.sku, qty: l.qty })), state.date);
+    const diff = now.total - o.total;
+    const cmp = Math.abs(diff) < 0.005 ? 'совпадает с расчётом на выбранную дату'
+      : `на ${fd(state.date)} та же корзина стоила бы ${rub(now.total)} (${diff > 0 ? '+' : '−'}${rub(Math.abs(diff))}) — в заказе цена не изменится`;
+    return `<div class="order"><div class="st st-${o.status}">${esc(ST[o.status])} · ${esc(catalog.customers.get(o.customerId).name)}</div>
+      <div>Цены зафиксированы ${fd(o.fixedAt)}: <b style="white-space:nowrap">${esc(rub(o.total))}</b></div>
+      <div class="muted">${esc(o.reason)}</div><div class="muted">${esc(cmp)}</div></div>`;
+  }).join('');
+
+  // Каталог
+  $('cat').innerHTML = DATA.products.map(p => `<div><span>${esc(p.name)}<br><span class="sku">${esc(p.sku)} · ${esc(rub(p.listPrice))}</span></span>
+    <button data-act="add" data-sku="${esc(p.sku)}" aria-label="Добавить 10 шт.: ${esc(p.name)}">+ 10 шт.</button></div>`).join('');
+
+  // Условия на дату
+  $('tdate').textContent = fd(state.date);
+  const issues = validateCatalog(catalog);
+  $('issues').innerHTML = issues.length
+    ? `<div class="issues">${issues.map(i => `${i.level === 'error' ? '✖' : '⚠'} ${esc(i.termId ?? '')} ${esc(i.message)}`).join('<br>')}</div>`
+    : '<div class="issues">Проверка правил: ошибок и предупреждений нет.</div>';
+  const mine = $('onlyMine').checked;
+  const rows = DATA.terms.filter(t => !mine || matchesCustomer(t, customer)).map(t => {
+    const on = isActive(t, state.date);
+    const st = on ? 'действует' : t.validFrom > state.date ? `начнётся ${fd(t.validFrom)}` : 'завершено';
+    const extra = [t.minQty ? `от ${t.minQty} шт.` : '', t.source === 'promo' && t.base === 'contract' ? 'поверх договора' : ''].filter(Boolean).join(', ');
+    return `<tr class="${on ? '' : 'off'}"><td><b>${esc(t.title)}</b><br><span class="sku">${esc(t.id)}</span></td>
+      <td><span class="badge b-${t.source}">${SRC[t.source]}</span><br>${esc(describeEffect(t.effect))}${extra ? '<br>' + esc(extra) : ''}</td>
+      <td>${esc(scopeText(t.scope))}</td><td>${esc(audText(t.audience))}</td>
+      <td style="white-space:nowrap">${fd(t.validFrom)} — ${t.validTo ? fd(t.validTo) : 'бессрочно'}</td>
+      <td>${esc(st)}</td><td>${esc(docText(t.document))}</td></tr>`;
+  });
+  $('terms').innerHTML = rows.join('') || '<tr><td colspan="7" class="empty">Нет условий для этого клиента</td></tr>';
+}
+
+// События
+$('cust').addEventListener('change', e => { state.customerId = e.target.value; $('limitBox').innerHTML = ''; render(); });
+$('date').addEventListener('change', e => { if (e.target.value) { state.date = e.target.value; render(); } });
+$('presets').addEventListener('click', e => { const b = e.target.closest('[data-d]'); if (b) { state.date = b.dataset.d; render(); } });
+$('onlyMine').addEventListener('change', render);
+$('limitBox').addEventListener('input', e => { if (e.target.id === 'debt') state.debt = Math.max(0, Number(e.target.value) || 0); });
+$('cart').addEventListener('change', e => {
+  const t = e.target;
+  if (t.dataset.act === 'qty') { state.cart[+t.dataset.i].qty = Math.max(1, Math.round(Number(t.value) || 1)); render(); }
+});
+document.addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]');
+  if (!b) return;
+  if (b.dataset.act === 'del') state.cart.splice(+b.dataset.i, 1);
+  if (b.dataset.act === 'setqty') state.cart[+b.dataset.i].qty = +b.dataset.q;
+  if (b.dataset.act === 'add') {
+    const line = state.cart.find(l => l.sku === b.dataset.sku);
+    if (line) line.qty += 10; else state.cart.push({ sku: b.dataset.sku, qty: 10 });
+  }
+  render();
+});
+$('launch').addEventListener('click', () => {
+  if (!state.cart.length) return;
+  const o = launchOrder(catalog, state.customerId, state.cart, state.date, { outstandingDebt: state.debt });
+  state.orders.unshift(o);
+  render();
+});
+
+render();
+}
+</script>
+</body>
+</html>

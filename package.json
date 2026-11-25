@@ -11,7 +11,8 @@
     "test": "node --test \"engine/test/**/*.test.ts\"",
     "typecheck": "tsc --noEmit",
     "validate": "node scripts/validate.ts",
-    "price": "node scripts/price.ts"
+    "price": "node scripts/price.ts",
+    "build": "node scripts/build-web.ts"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

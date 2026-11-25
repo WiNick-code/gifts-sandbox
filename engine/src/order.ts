@@ -1,6 +1,6 @@
 import type { CartLine, Catalog, DocumentRef, ISODate, PaymentTerms } from './types.ts';
 import { priceCart } from './price.ts';
-import { toKop } from './money.ts';
+import { formatRub, toKop } from './money.ts';
 
 export type OrderStatus = 'launched' | 'awaiting_prepayment' | 'blocked_credit_limit';
 
@@ -54,9 +54,9 @@ export function launchOrder(
       const debt = opts.outstandingDebt ?? 0;
       if (toKop(debt) + toKop(priced.total) > toKop(pay.limit)) {
         status = 'blocked_credit_limit';
-        reason = `Превышен кредитный лимит: задолженность ${debt} ₽ + заказ ${priced.total} ₽ > лимит ${pay.limit} ₽.`;
+        reason = `Превышен кредитный лимит: задолженность ${formatRub(debt)} + заказ ${formatRub(priced.total)} > лимит ${formatRub(pay.limit)}.`;
       } else {
-        reason = `Отсрочка ${pay.days} дн., лимит ${pay.limit} ₽ не превышен: заказ запущен.`;
+        reason = `Отсрочка ${pay.days} дн., лимит ${formatRub(pay.limit)} не превышен: заказ запущен.`;
       }
       break;
     }
