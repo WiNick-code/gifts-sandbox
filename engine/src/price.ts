@@ -1,6 +1,14 @@
-import type { Candidate, CartLine, Catalog, Customer, ISODate, PricedCart, PricedLine, Term } from './types.ts';
+import type { Candidate, CartLine, Catalog, Customer, ISODate, PricedCart, PricedLine, PromoBudget, Term } from './types.ts';
 import { fromKop, toKop } from './money.ts';
-import { applyEffect, describeEffect, isActive, matchesCustomer, matchesProduct, specificity } from './terms.ts';
+import {
+  applyEffect,
+  describeEffect,
+  isActive,
+  marginFloorKop,
+  matchesCustomer,
+  relevantTerms,
+  specificity,
+} from './terms.ts';
 
 /**
  * Правила расчёта цены строки:
@@ -9,8 +17,11 @@ import { applyEffect, describeEffect, isActive, matchesCustomer, matchesProduct,
  *    с наибольшим приоритетом, затем самое точное (SKU > категория > всё), затем самое позднее
  *    (более позднее допсоглашение перекрывает предыдущее).
  * 3. Каждая действующая акция считает цену от прайса или от договорной цены (поле base).
- * 4. Клиент получает минимальную цену из договорной и акционных. Когда акция заканчивается,
- *    она просто перестаёт быть кандидатом — цена автоматически возвращается к договорной.
+ *    Ограничители: акция не применяется ниже минимальной маржи (minMargin) и сверх
+ *    лимита количества в заказе (maxQtyPerOrder).
+ * 4. Клиент получает минимальную цену из договорной и акционных. Когда акция заканчивается
+ *    (или срабатывает ограничитель), она просто перестаёт быть кандидатом — цена
+ *    автоматически возвращается к договорной.
  */
 export function priceLine(catalog: Catalog, customer: Customer, line: CartLine, date: ISODate): PricedLine {
   const product = catalog.products.get(line.sku);
@@ -19,8 +30,8 @@ export function priceLine(catalog: Catalog, customer: Customer, line: CartLine, 
   const listKop = toKop(product.listPrice);
   const candidates: Candidate[] = [];
 
-  const relevant = catalog.terms.filter(
-    (t) => isActive(t, date) && matchesProduct(t, product) && matchesCustomer(t, customer),
+  const relevant = relevantTerms(catalog.index, catalog.terms, product).filter(
+    (t) => isActive(t, date) && matchesCustomer(t, customer),
   );
   const eligible = relevant.filter((t) => !t.minQty || line.qty >= t.minQty);
 
@@ -66,7 +77,38 @@ export function priceLine(catalog: Catalog, customer: Customer, line: CartLine, 
 
   for (const t of eligible.filter((t) => t.source === 'promo')) {
     const base = t.base === 'contract' ? contractKop : listKop;
-    options.push({ kop: applyEffect(t.effect, base), term: t, source: 'promo' });
+    const promoKop = applyEffect(t.effect, base);
+
+    // Ограничитель маржи: акция не может продавать ниже себестоимости + минимальной маржи.
+    const floor = marginFloorKop(t, product);
+    if (floor != null && promoKop < floor) {
+      candidates.push({
+        termId: t.id,
+        title: t.title,
+        source: 'promo',
+        unitPrice: fromKop(promoKop),
+        status: 'rejected',
+        reason: `ниже минимальной маржи: цена ${fromKop(promoKop)} ₽ < себестоимость ${product.cost} ₽ + маржа ${t.minMargin}% (${fromKop(floor)} ₽)`,
+        document: t.document,
+      });
+      continue;
+    }
+
+    // Ограничитель количества: акция не действует сверх лимита штук в заказе.
+    if (t.maxQtyPerOrder != null && line.qty > t.maxQtyPerOrder) {
+      candidates.push({
+        termId: t.id,
+        title: t.title,
+        source: 'promo',
+        unitPrice: fromKop(promoKop),
+        status: 'limit',
+        reason: `лимит ${t.maxQtyPerOrder} шт. в заказе (в корзине ${line.qty} шт.) — доступно до ${t.maxQtyPerOrder} шт.`,
+        document: t.document,
+      });
+      continue;
+    }
+
+    options.push({ kop: promoKop, term: t, source: 'promo' });
   }
 
   // Минимальная цена; при равенстве — больший приоритет, затем договор (без акции).
@@ -102,6 +144,7 @@ export function priceLine(catalog: Catalog, customer: Customer, line: CartLine, 
     contractPrice: fromKop(contractKop),
     unitPrice: fromKop(best.kop),
     total: fromKop(best.kop * line.qty),
+    margin: fromKop((best.kop - toKop(product.cost)) * line.qty),
     applied: {
       termId: best.term?.id ?? null,
       title: best.term?.title ?? 'Прайс',
@@ -112,7 +155,8 @@ export function priceLine(catalog: Catalog, customer: Customer, line: CartLine, 
   };
 }
 
-const order = (s: Candidate['status']) => (s === 'applied' ? 0 : s === 'rejected' ? 1 : 2);
+const order = (s: Candidate['status']) =>
+  s === 'applied' ? 0 : s === 'rejected' ? 1 : s === 'limit' ? 2 : 3;
 
 export function priceCart(catalog: Catalog, customerId: string, cart: CartLine[], date: ISODate): PricedCart {
   const customer = catalog.customers.get(customerId);
@@ -120,6 +164,26 @@ export function priceCart(catalog: Catalog, customerId: string, cart: CartLine[]
   const lines = cart.map((l) => priceLine(catalog, customer, l, date));
   const totalKop = lines.reduce((s, l) => s + toKop(l.total), 0);
   const listKop = lines.reduce((s, l) => s + toKop(l.listPrice) * l.qty, 0);
+
+  // Бюджеты акций: сколько скидки дала каждая акция с заданным бюджетом.
+  // Бюджет — учётный ограничитель: акция не блокируется, но превышение показывается предупреждением.
+  const byId = new Map(catalog.terms.map((t) => [t.id, t]));
+  const spent = new Map<string, number>();
+  for (const l of lines) {
+    if (l.applied.termId == null) continue;
+    const t = byId.get(l.applied.termId);
+    if (!t || t.source !== 'promo' || t.budget == null) continue;
+    const effectKop = toKop(l.listPrice) - toKop(l.unitPrice); // скидка за единицу
+    spent.set(t.id, (spent.get(t.id) ?? 0) + effectKop * l.qty);
+  }
+  const promoBudgets: PromoBudget[] = [...spent.entries()].map(([termId, spentKop]) => {
+    const budget = byId.get(termId)!.budget!;
+    return { termId, budget, spent: fromKop(spentKop), exceeded: spentKop > toKop(budget) };
+  });
+  const warnings = promoBudgets
+    .filter((b) => b.exceeded)
+    .map((b) => `Бюджет акции «${byId.get(b.termId)!.title}» превышен: расход ${b.spent} ₽ при бюджете ${b.budget} ₽`);
+
   return {
     customerId,
     date,
@@ -127,5 +191,7 @@ export function priceCart(catalog: Catalog, customerId: string, cart: CartLine[]
     total: fromKop(totalKop),
     listTotal: fromKop(listKop),
     savings: fromKop(listKop - totalKop),
+    promoBudgets,
+    warnings,
   };
 }

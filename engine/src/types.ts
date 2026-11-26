@@ -3,11 +3,17 @@
 
 export type ISODate = string; // 'YYYY-MM-DD'
 
+// Карточка товара: то, что приходит из учётной системы (см. seed/1c-mapping.json —
+// соответствие полей 1С УТ полям движка) и описательная часть для витрины и CRM.
 export interface Product {
   sku: string;
   name: string;
   category: string;
   listPrice: number; // базовая (прайсовая) цена, руб.
+  cost: number; // себестоимость, руб. — из учётной системы; нужна для ограничителей маржи
+  unit?: string; // единица: «шт.», «компл.» — иначе «шт.»
+  description?: string; // описательная часть для витрины/CRM
+  attributes?: Record<string, string>; // характеристики: материал, цвет, бренд...
 }
 
 export type PaymentTerms =
@@ -50,6 +56,19 @@ export interface Term {
   priority?: number; // больше — важнее
   document?: DocumentRef;
   origin?: string; // файл, из которого загружено условие (заполняет загрузчик)
+  // Ограничители (только для акций; без них ограничитель не действует).
+  minMargin?: number; // минимальная маржа, % от себестоимости; блокирует цену ниже порога
+  maxQtyPerOrder?: number; // лимит штук в одном заказе; блокирует строку сверх лимита
+  budget?: number; // бюджет акции, руб.; предупреждение при превышении (учётный, не блокирующий)
+}
+
+// Инвертированный индекс условий: на больших каталогах выборка «условия, относящиеся
+// к товару» не должна перебирать все условия. Строится один раз на загруженный набор.
+export interface TermIndex {
+  bySku: Map<string, Term[]>;
+  byCategory: Map<string, Term[]>;
+  global: Term[]; // условия с охватом «весь ассортимент»
+  excluded: Map<string, Term[]>; // sku → условия, явно исключившие этот sku
 }
 
 export interface CartLine {
@@ -61,9 +80,10 @@ export interface Catalog {
   products: Map<string, Product>;
   customers: Map<string, Customer>;
   terms: Term[];
+  index?: TermIndex; // строится загрузчиком; без него — линейный перебор (мало условий)
 }
 
-export type CandidateStatus = 'applied' | 'rejected' | 'not_eligible';
+export type CandidateStatus = 'applied' | 'rejected' | 'not_eligible' | 'limit';
 
 export interface Candidate {
   termId: string | null; // null — прайсовая цена
@@ -83,8 +103,17 @@ export interface PricedLine {
   contractPrice: number;
   unitPrice: number;
   total: number;
+  margin: number; // маржа строки: (итоговая цена − себестоимость) × количество, руб.; отрицательная — сигнал убытка
   applied: { termId: string | null; title: string; source: Candidate['source']; document?: DocumentRef };
   candidates: Candidate[];
+}
+
+// Расход бюджета акции по корзине: сколько акция «стоит» компании.
+export interface PromoBudget {
+  termId: string;
+  budget: number; // согласованный бюджет, руб.
+  spent: number; // скидочный эффект по корзине, руб.
+  exceeded: boolean; // бюджет превышен — предупреждение, акция не блокируется
 }
 
 export interface PricedCart {
@@ -94,4 +123,6 @@ export interface PricedCart {
   total: number;
   listTotal: number;
   savings: number; // выгода клиента относительно прайса, руб.
+  promoBudgets: PromoBudget[]; // по акциям с заданным бюджетом
+  warnings: string[]; // предупреждения движка по корзине (превышение бюджета акции)
 }

@@ -1,4 +1,6 @@
-import type { Catalog, Term } from './types.ts';
+import type { Catalog, Product, Term } from './types.ts';
+import { applyEffect, marginFloorKop } from './terms.ts';
+import { toKop } from './money.ts';
 
 export interface Issue {
   level: 'error' | 'warning';
@@ -18,6 +20,13 @@ export function validateCatalog(catalog: Catalog): Issue[] {
   const seen = new Map<string, Term>();
   const categories = new Set([...catalog.products.values()].map((p) => p.category));
   const segments = new Set([...catalog.customers.values()].map((c) => c.segment));
+
+  for (const p of catalog.products.values()) {
+    if (p.cost == null || Number.isNaN(p.cost)) add('error', undefined, `Товар ${p.sku}: не задана себестоимость (cost)`);
+    else if (p.cost < 0) add('error', undefined, `Товар ${p.sku}: отрицательная себестоимость ${p.cost}`);
+    else if (p.listPrice > 0 && p.cost > p.listPrice)
+      add('warning', undefined, `Товар ${p.sku}: себестоимость ${p.cost} ₽ выше прайса ${p.listPrice} ₽ — каждая продажа в убыток`);
+  }
 
   for (const t of catalog.terms) {
     if (seen.has(t.id)) add('error', t, `Дублируется id «${t.id}» (также в ${seen.get(t.id)!.origin})`);
@@ -47,6 +56,29 @@ export function validateCatalog(catalog: Catalog): Issue[] {
     if (t.source === 'contract' && a.all) add('warning', t, 'Условие договора адресовано всем клиентам — это точно не акция?');
     if (t.source === 'contract' && !t.document) add('warning', t, 'Условие договора без ссылки на документ ЭДО');
     if (t.source === 'promo' && !t.validTo) add('warning', t, 'Бессрочная акция — задайте дату окончания');
+
+    // Ограничители: явные ошибки в значениях и предупреждения о марже.
+    if (t.minMargin != null && (t.minMargin < 0 || t.minMargin >= 100))
+      add('error', t, `Минимальная маржа ${t.minMargin}% вне диапазона [0; 100)`);
+    if (t.maxQtyPerOrder != null && t.maxQtyPerOrder <= 0)
+      add('error', t, `Лимит количества в заказе должен быть больше нуля (задано ${t.maxQtyPerOrder})`);
+    if (t.budget != null && t.budget <= 0) add('error', t, `Бюджет акции должен быть больше нуля (задано ${t.budget})`);
+    if (t.source !== 'promo' && (t.minMargin != null || t.maxQtyPerOrder != null || t.budget != null))
+      add('warning', t, 'Ограничители (маржа, лимит, бюджет) имеют смысл только у акций — у договора они игнорируются');
+    if (t.source === 'promo' && t.minMargin == null)
+      add('warning', t, 'Акция без минимальной маржи: при глубокой скидке цена может уйти ниже себестоимости');
+    for (const p of promoProducts(catalog, t)) {
+      if (t.minMargin == null && promoPriceBelowCost(t, p))
+        add('warning', t, `Акция продаёт ${p.sku} ниже себестоимости ${p.cost} ₽ — задайте minMargin или смягчите скидку`);
+      const floor = marginFloorKop(t, p);
+      const promoKop = applyEffect(
+        t.effect,
+        t.base === 'contract' ? toKop(p.listPrice) : toKop(p.listPrice), // договорную цену здесь не знаем — считаем от прайса
+      );
+      if (floor != null && promoKop < floor)
+        add('warning', t, `Акция нарушает собственный ограничитель для ${p.sku}: цена ${promoKop / 100} ₽ ниже порога маржи ${floor / 100} ₽ — условие никогда не применится`);
+    }
+
     if (e.type === 'fixed_price')
       for (const sku of s.skus ?? []) {
         const p = catalog.products.get(sku);
@@ -69,4 +101,18 @@ export function validateCatalog(catalog: Catalog): Issue[] {
     }
 
   return issues;
+}
+
+// Товары, которых касается акция (для проверки маржи по каждому SKU).
+function promoProducts(catalog: Catalog, t: Term): Product[] {
+  const s = t.scope;
+  if (s.all) return [...catalog.products.values()];
+  const bySku = (s.skus ?? []).map((sku) => catalog.products.get(sku)).filter((p) => p != null);
+  if (bySku.length) return bySku as Product[];
+  return [...catalog.products.values()].filter((p) => s.categories?.includes(p.category));
+}
+
+// Даёт ли акция цену ниже себестоимости (без учёта ограничителя маржи), от прайсовой цены.
+function promoPriceBelowCost(t: Term, p: Product): boolean {
+  return applyEffect(t.effect, toKop(p.listPrice)) < toKop(p.cost);
 }

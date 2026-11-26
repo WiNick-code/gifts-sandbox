@@ -9,7 +9,8 @@
       "scope": { "categories": ["Новый год"] },
       "audience": { "all": true },
       "validFrom": "2026-11-15",
-      "validTo": "2026-12-31"
+      "validTo": "2026-12-31",
+      "minMargin": 5
     },
     {
       "id": "promo-mugs-volume",
@@ -20,7 +21,10 @@
       "audience": { "all": true },
       "validFrom": "2026-11-01",
       "validTo": "2026-11-30",
-      "minQty": 500
+      "minQty": 500,
+      "minMargin": 0,
+      "maxQtyPerOrder": 1000,
+      "budget": 30000
     },
     {
       "id": "promo-agency-pens",
@@ -31,7 +35,19 @@
       "scope": { "categories": ["Ручки"] },
       "audience": { "segments": ["agency"] },
       "validFrom": "2026-11-20",
-      "validTo": "2026-12-15"
+      "validTo": "2026-12-15",
+      "minMargin": 3
+    },
+    {
+      "id": "promo-ny-fire-sale",
+      "title": "Распродажа: свечи −35%",
+      "source": "promo",
+      "effect": { "type": "percent_off", "percent": 35 },
+      "scope": { "skus": ["NY-02"] },
+      "audience": { "all": true },
+      "validFrom": "2026-12-20",
+      "validTo": "2026-12-31",
+      "minMargin": 5
     }
   ]
 }

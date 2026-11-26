@@ -114,6 +114,7 @@ pre,.scroll{overflow-x:auto}.scroll a{flex:none}code{overflow-wrap:anywhere}html
       <div class="big" id="total"></div>
       <div id="sum" style="margin-top:10px"></div>
       <div id="limitBox"></div>
+      <div id="budgetBox"></div>
       <button class="primary" id="launch">Запустить заказ</button>
       <div class="muted" style="margin-top:8px">При запуске проверяются условия оплаты, а цены фиксируются и больше не меняются.</div>
       <div id="orders"></div>
@@ -129,7 +130,8 @@ pre,.scroll{overflow-x:auto}.scroll a{flex:none}code{overflow-wrap:anywhere}html
   <h2>Условия на <span id="tdate"></span></h2>
   <div id="issues"></div>
   <label class="tg"><input type="checkbox" id="onlyMine" checked> Только условия, адресованные выбранному клиенту</label>
-  <table class="stack"><thead><tr><th>Условие</th><th>Тип</th><th>Товары</th><th>Кому</th><th>Срок</th><th>Статус</th><th>Документ</th></tr></thead><tbody id="terms"></tbody></table>
+  <label class="tg"><input type="checkbox" id="showMargin"> Показывать маржу и бюджеты (внутренний контур)</label>
+  <table class="stack"><thead><tr><th>Условие</th><th>Тип</th><th>Товары</th><th>Кому</th><th>Срок</th><th>Статус</th><th>Документ</th><th>Ограничители</th></tr></thead><tbody id="terms"></tbody></table>
 </div></section>
 
 <footer class="band" style="padding-top:0"><div class="wrap">
@@ -202,8 +204,10 @@ function render() {
   $('cart').innerHTML = priced.lines.length ? priced.lines.map((l, i) => {
     const w = l.listPrice ? (l.unitPrice / l.listPrice) * 100 : 100;
     const cw = l.listPrice ? (l.contractPrice / l.listPrice) * 100 : 100;
-    const hints = l.candidates.filter(c => c.status === 'not_eligible').map(c => {
+    const hints = l.candidates.filter(c => c.status === 'not_eligible' || c.status === 'limit').map(c => {
       const t = termById.get(c.termId);
+      if (c.status === 'limit')
+        return `<div class="hint"><span>${esc(c.title)}: ${esc(c.reason)}</span><button data-act="setqty" data-i="${i}" data-q="${t?.maxQtyPerOrder}">Скорректировать до ${t?.maxQtyPerOrder} шт.</button></div>`;
       const need = (t?.minQty ?? 0) - l.qty;
       return `<div class="hint"><span>До «${esc(c.title)}» не хватает ${need} шт.</span><button data-act="setqty" data-i="${i}" data-q="${t?.minQty}">Довести до ${t?.minQty} шт.</button></div>`;
     }).join('');
@@ -221,6 +225,7 @@ function render() {
         <div><span>Договор</span>${esc(rub(l.contractPrice))}</div>
         <div><span>Итог за шт.</span><span class="fin" style="color:var(--accent);font-size:inherit">${esc(rub(l.unitPrice))}</span></div>
         <div><span>Сумма</span><b>${esc(rub(l.total))}</b></div>
+        ${$('showMargin').checked ? `<div><span>Маржа строки</span><b style="color:${l.margin < 0 ? 'var(--accent)' : 'var(--contract)'}">${esc(rub(l.margin))}</b></div>` : ''}
       </div>
       <div class="applied"><span class="badge b-${l.applied.source}">${SRC[l.applied.source]}</span><span>${esc(l.applied.title)}</span></div>
       ${hints}
@@ -233,6 +238,11 @@ function render() {
   const pct = priced.listTotal ? (priced.savings / priced.listTotal * 100).toLocaleString('ru-RU', { maximumFractionDigits: 1 }) : '0';
   $('sum').innerHTML = `<div class="kv"><span>По прайсу</span><b>${esc(rub(priced.listTotal))}</b></div>
     <div class="kv"><span>Выгода клиента</span><b style="color:var(--accent)">${esc(rub(priced.savings))} · ${pct}%</b></div>`;
+  // Бюджеты акций — внутренний контур: виден только при включённом тумблере маржи.
+  $('budgetBox').innerHTML = !$('showMargin').checked ? '' :
+    priced.promoBudgets.map(b => `<div class="kv"><span>Бюджет «${esc(termById.get(b.termId)?.title ?? b.termId)}»</span>
+      <b style="${b.exceeded ? 'color:var(--accent)' : ''}">${esc(rub(b.spent))} / ${esc(rub(b.budget))}${b.exceeded ? ' — превышен' : ''}</b></div>`).join('')
+    + (priced.warnings.length && $('showMargin').checked ? `<div class="hint">${priced.warnings.map(esc).join('<br>')}</div>` : '');
   const lim = customer.payment.type === 'deferral_limit';
   if (!lim) $('limitBox').innerHTML = '';
   else if (!$('debt')) $('limitBox').innerHTML = `<label class="f" style="color:var(--muted);margin-top:10px">Текущая задолженность клиента, ₽<input id="debt" type="number" min="0" step="1000" inputmode="numeric" value="${state.debt}"></label>`;
@@ -264,13 +274,18 @@ function render() {
     const on = isActive(t, state.date);
     const st = on ? 'действует' : t.validFrom > state.date ? `начнётся ${fd(t.validFrom)}` : 'завершено';
     const extra = [t.minQty ? `от ${t.minQty} шт.` : '', t.source === 'promo' && t.base === 'contract' ? 'поверх договора' : ''].filter(Boolean).join(', ');
+    const guards = [
+      t.minMargin != null ? `маржа ≥ ${t.minMargin}%` : '',
+      t.maxQtyPerOrder != null ? `до ${t.maxQtyPerOrder} шт./заказ` : '',
+      t.budget != null ? `бюджет ${rub(t.budget)}` : '',
+    ].filter(Boolean).join('; ');
     return `<tr class="${on ? '' : 'off'}"><td><b>${esc(t.title)}</b><br><span class="sku">${esc(t.id)}</span></td>
       <td><span class="badge b-${t.source}">${SRC[t.source]}</span><br>${esc(describeEffect(t.effect))}${extra ? '<br>' + esc(extra) : ''}</td>
       <td>${esc(scopeText(t.scope))}</td><td>${esc(audText(t.audience))}</td>
       <td style="white-space:nowrap">${fd(t.validFrom)} — ${t.validTo ? fd(t.validTo) : 'бессрочно'}</td>
-      <td>${esc(st)}</td><td>${esc(docText(t.document))}</td></tr>`;
+      <td>${esc(st)}</td><td>${esc(docText(t.document))}</td><td>${esc(guards) || '—'}</td></tr>`;
   });
-  $('terms').innerHTML = rows.join('') || '<tr><td colspan="7" class="empty">Нет условий для этого клиента</td></tr>';
+  $('terms').innerHTML = rows.join('') || '<tr><td colspan="8" class="empty">Нет условий для этого клиента</td></tr>';
 }
 
 // События
@@ -278,6 +293,7 @@ $('cust').addEventListener('change', e => { state.customerId = e.target.value; $
 $('date').addEventListener('change', e => { if (e.target.value) { state.date = e.target.value; render(); } });
 $('presets').addEventListener('click', e => { const b = e.target.closest('[data-d]'); if (b) { state.date = b.dataset.d; render(); } });
 $('onlyMine').addEventListener('change', render);
+$('showMargin').addEventListener('change', render);
 $('limitBox').addEventListener('input', e => { if (e.target.id === 'debt') state.debt = Math.max(0, Number(e.target.value) || 0); });
 $('cart').addEventListener('change', e => {
   const t = e.target;

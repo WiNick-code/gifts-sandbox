@@ -5,6 +5,7 @@ import { stripTypeScriptTypes } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { loadCatalog } from '../engine/src/load.ts';
+import { buildTermIndex } from '../engine/src/terms.ts';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 
@@ -31,7 +32,13 @@ export function bundleData(): string {
 export function buildPage(): string {
   const tpl = readFileSync(join(root, 'web/index.html'), 'utf8');
   if (!tpl.includes('/*__ENGINE__*/') || !tpl.includes('/*__DATA__*/null')) throw new Error('В шаблоне нет меток сборки');
-  return tpl.replace('/*__ENGINE__*/', () => bundleEngine()).replace('/*__DATA__*/null', () => bundleData());
+  return (
+    tpl
+      .replace('/*__ENGINE__*/', () => bundleEngine())
+      .replace('/*__DATA__*/null', () => bundleData())
+      // В браузере нет загрузчика с диска — индекс условий строится на встроенных данных.
+      .replace('terms: DATA.terms', 'terms: DATA.terms, index: buildTermIndex(DATA.terms)')
+  );
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

@@ -1,4 +1,4 @@
-import type { Customer, ISODate, Product, Term, TermEffect } from './types.ts';
+import type { Customer, ISODate, Product, Term, TermEffect, TermIndex } from './types.ts';
 import { toKop } from './money.ts';
 
 export function isActive(t: Term, date: ISODate): boolean {
@@ -16,6 +16,52 @@ export function matchesCustomer(t: Term, c: Customer): boolean {
   const a = t.audience;
   if (a.all) return true;
   return Boolean(a.customerIds?.includes(c.id) || a.segments?.includes(c.segment));
+}
+
+// Инвертированный индекс: условия, относящиеся к товару, ищутся без перебора всех условий.
+// Дорого один раз, зато потом каждая строка корзины стоит O(условий на товар), а не O(всех условий).
+export function buildTermIndex(terms: Term[]): TermIndex {
+  const index: TermIndex = { bySku: new Map(), byCategory: new Map(), global: [], excluded: new Map() };
+  for (const t of terms) {
+    const s = t.scope;
+    for (const sku of s.excludeSkus ?? []) push(index.excluded, sku, t);
+    if (s.all) index.global.push(t);
+    for (const sku of s.skus ?? []) push(index.bySku, sku, t);
+    for (const cat of s.categories ?? []) push(index.byCategory, cat, t);
+  }
+  return index;
+}
+
+const push = (m: Map<string, Term[]>, key: string, t: Term) => {
+  const list = m.get(key);
+  if (list) list.push(t);
+  else m.set(key, [t]);
+};
+
+// Условия, которые могут относиться к товару: весь ассортимент + SKU + категория,
+// минус явно исключившие этот SKU. Порядок внутри не гарантируется — сортирует расчётчик.
+export function relevantTerms(index: TermIndex | undefined, terms: Term[], p: Product): Term[] {
+  if (!index) return terms.filter((t) => matchesProduct(t, p)); // fallback: каталог без индекса
+  const seen = new Set<Term>();
+  const result: Term[] = [];
+  const add = (t: Term) => {
+    if (!seen.has(t)) {
+      seen.add(t);
+      result.push(t);
+    }
+  };
+  index.global.forEach(add);
+  (index.bySku.get(p.sku) ?? []).forEach(add);
+  (index.byCategory.get(p.category) ?? []).forEach(add);
+  for (const t of index.excluded.get(p.sku) ?? []) seen.add(t); // исключённые — не добавляем
+  return result;
+}
+
+// Минимально допустимая цена акции по ограничителю маржи, в копейках:
+// себестоимость × (1 + minMargin%). Функция нужна и расчёту, и валидатору.
+export function marginFloorKop(t: Term, p: Product): number | null {
+  if (t.minMargin == null) return null;
+  return Math.round((toKop(p.cost) * (100 + t.minMargin)) / 100);
 }
 
 // Насколько точно условие нацелено на товар: SKU > категория > весь ассортимент.
