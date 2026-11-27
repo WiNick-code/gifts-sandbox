@@ -1,0 +1,58 @@
+/* Общая палитра песочницы. Все страницы используют одни и те же переменные:
+   смена палитры — атрибут data-palette на <html> (magenta по умолчанию / green / red).
+   Пурпурная схема — основная, остальные — вариации тех же ролей:
+   accent — акцент действий и итоговой цены; contract — цвет договорных условий;
+   ok/plan/off — статусы (включена/запланирована/выключена); soft — подложка подсказок. */
+
+:root, :root[data-palette="magenta"] {
+  color-scheme: light dark;
+  --bg: light-dark(#f2f4f9, #070f26);
+  --panel: light-dark(#fff, #0f1c3d);
+  --ink: light-dark(#0b1f4b, #e8ecf7);
+  --muted: light-dark(#56617b, #9ba7c5);
+  --line: light-dark(#dde2ee, #24335d);
+  --track: light-dark(#e8ecf5, #1a2a55);
+  --band: light-dark(#0b1f4b, #0c1a3e);
+  --accent: light-dark(#e0115f, #ff4d8d);
+  --contract: light-dark(#2453c7, #7ea4ff);
+  --soft: light-dark(#fdeaf1, #3a1430);
+  --ok: light-dark(#157f3d, #4cc276);
+  --plan: light-dark(#b7791f, #e2a544);
+  --off: light-dark(#c2334d, #ff6b7f);
+}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+
+/* Зелёная гамма: изумрудный акцент, тёмно-зелёная лента, оливковые подсказки. */
+:root[data-palette="green"] {
+  --bg: light-dark(#f1f6f2, #04150e);
+  --panel: light-dark(#fff, #0d2118);
+  --ink: light-dark(#0b3a24, #e6f2e9);
+  --muted: light-dark(#53685c, #93b3a0);
+  --line: light-dark(#d9e7dd, #1f4a34);
+  --track: light-dark(#e6efe9, #173a27);
+  --band: light-dark(#0b3a24, #0a2a1c);
+  --accent: light-dark(#00875a, #2fd08a);
+  --contract: light-dark(#1a7f4f, #6fd6a5);
+  --soft: light-dark(#e2f5ea, #12331f);
+  --ok: light-dark(#157f3d, #4cc276);
+  --plan: light-dark(#b7791f, #e2a544);
+  --off: light-dark(#c2334d, #ff6b7f);
+}
+
+/* Красная гамма: киноварный акцент, тёмно-бордовая лента, тёплые подсказки. */
+:root[data-palette="red"] {
+  --bg: light-dark(#f9f0ef, #1a0709);
+  --panel: light-dark(#fff, #2b0f12);
+  --ink: light-dark(#4b0f16, #f7e8e8);
+  --muted: light-dark(#7b565c, #c59ba0);
+  --line: light-dark(#eedbda, #5a2429);
+  --track: light-dark(#f5e6e5, #42161b);
+  --band: light-dark(#4b0f16, #380b10);
+  --accent: light-dark(#c81e1e, #ff5f5f);
+  --contract: light-dark(#a3407f, #e69ad3);
+  --soft: light-dark(#fbe4e4, #4a1418);
+  --ok: light-dark(#157f3d, #4cc276);
+  --plan: light-dark(#b7791f, #e2a544);
+  --off: light-dark(#8f1d2c, #e0646f);
+}

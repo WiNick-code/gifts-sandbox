@@ -49,3 +49,23 @@ test('страница пресетов собирается: механики �
   assert.ok(html.includes('dialog')); // конструктор — модальное окно
   assert.ok(html.includes('Новая механика'));
 });
+
+test('страница настройки акции собирается: конструктор, предпросмотр, валидатор', () => {
+  const html = buildPage('promo-edit.html');
+  assert.ok(html.startsWith('<!DOCTYPE html>'));
+  assert.ok(!html.includes('/*__ENGINE__*/') && !html.includes('/*__DATA__*/'));
+  assert.ok(html.includes('function validateCatalog')); // живая проверка черновика
+  assert.ok(html.includes('Мин. маржа')); // ограничители в форме
+  assert.ok(html.includes('Предпросмотр условия'));
+});
+
+test('палитры: три схемы и переключатель встроены во все страницы', () => {
+  for (const tpl of ['index.html', 'admin.html', 'presets.html', 'promo-edit.html']) {
+    const html = buildPage(tpl);
+    assert.ok(html.includes('[data-palette="green"]'), `${tpl}: нет зелёной палитры`);
+    assert.ok(html.includes('[data-palette="red"]'), `${tpl}: нет красной палитры`);
+    assert.ok(html.includes('gifts.palette'), `${tpl}: нет переключателя палитры`);
+    assert.ok(html.includes('data-palette-toggle'), `${tpl}: нет кнопки переключения`);
+    assert.ok(!html.includes('href="theme.css"'), `${tpl}: css не заинлайнен`);
+  }
+});

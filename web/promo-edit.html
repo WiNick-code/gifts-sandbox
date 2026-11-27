@@ -7,42 +7,332 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@500;700&family=Red+Hat+Text:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css">
 <style>
-:root{color-scheme:light dark;
-  --bg:light-dark(#f2f4f9,#070f26);--panel:light-dark(#fff,#0f1c3d);--ink:light-dark(#0b1f4b,#e8ecf7);
-  --muted:light-dark(#56617b,#9ba7c5);--line:light-dark(#dde2ee,#24335d);--band:light-dark(#0b1f4b,#0c1a3e);
-  --accent:light-dark(#e0115f,#ff4d8d);--contract:light-dark(#2453c7,#7ea4ff);--soft:light-dark(#fdeaf1,#3a1430)}
+/* VOICE: рабочая форма маркетолога — от механики к готовой акции без сюрпризов.
+   IDEA: «конструктор с черновиком»: слева шаги (механика → параметры → охват → аудитория → сроки → ограничители),
+   справа живой предпросмотр: JSON-условие и проверка валидатором до публикации.
+   PICTURE: двухпанельный макет: форма слева, «что получится» справа — всегда на виду. */
 :root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Red Hat Text",system-ui,sans-serif}
-h1{font-family:"Red Hat Display",system-ui,sans-serif;font-weight:700;line-height:1.05;font-size:clamp(28px,4vw,42px);margin:0}
-.band{padding:clamp(24px,4vw,48px) max(5vw,16px)}
-.wrap{max-width:880px;margin:0 auto}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Red Hat Text",system-ui,sans-serif;overflow-x:clip}
+h1,h2,h3{font-family:"Red Hat Display",system-ui,sans-serif;font-weight:700;line-height:1.05;text-wrap:balance;margin:0}
+h1{font-size:clamp(26px,3.6vw,38px)}h2{font-size:20px;margin-bottom:12px}
+.band{padding:clamp(20px,3.4vw,40px) max(5vw,16px)}
+.wrap{max-width:1240px;margin:0 auto}
 header.band{background:var(--band);color:#fff}
-header p{color:#c5cfe8;max-width:70ch;margin:10px 0 22px}
+header p{color:#c5cfe8;max-width:72ch;margin:10px 0 20px}
 button{font:inherit;font-weight:600;min-height:44px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:8px 14px;cursor:pointer}
 button:hover{border-color:var(--contract)}
 :focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:clamp(16px,2.4vw,24px)}
+.chip{color:#fff;border-color:color-mix(in srgb,#fff 25%,transparent);background:transparent;font-weight:500}
 .primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.hint{margin-top:14px;font-size:14px;background:var(--soft);border-radius:8px;padding:10px 14px}
-.muted{color:var(--muted)}
+.primary:hover{filter:brightness(1.08);border-color:var(--accent)}
+.main{display:grid;gap:20px;grid-template-columns:minmax(0,1fr)}
+@media(min-width:1000px){.main{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}.side{position:sticky;top:16px;align-self:start}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:clamp(16px,2.4vw,24px)}
+.side .panel+.panel{margin-top:16px}
+label.f{display:grid;gap:4px;font-size:13px;color:var(--muted);margin-bottom:12px}
+select,input{font:inherit;font-size:16px;min-height:44px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:8px 10px}
+textarea{font:inherit;font-size:15px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:8px 10px;min-height:64px;resize:vertical}
+h3.step{font-size:15px;color:var(--muted);font-family:"Red Hat Text",system-ui;font-weight:600;margin:18px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+h3.step:first-of-type{border-top:0;margin-top:4px;padding-top:0}
+h3.step b{color:var(--accent)} /* номер шага */
+.mechgrid{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.mech{border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;background:var(--bg)}
+.mech[aria-pressed=true]{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 30%,transparent)}
+.mech .t{font-weight:600;font-size:14px}
+.mech .d{font-size:12px;color:var(--muted);margin-top:2px}
+.mech.archived{opacity:.5;cursor:not-allowed}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.row>label.f{flex:1;min-width:160px}
+.chk{display:flex;align-items:center;gap:8px;font-size:14px;margin:4px 0}
+.chk input{min-height:20px;width:20px}
+.hint{font-size:13px;background:var(--soft);border-radius:8px;padding:8px 12px;margin-top:8px}
+.preview{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;font:12.5px/1.5 ui-monospace,monospace;overflow-x:auto;white-space:pre-wrap;word-break:break-word}
+.issues{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:6px;font-size:13px}
+.issues li{background:var(--track);border-radius:8px;padding:6px 10px}
+.issues li.err{background:color-mix(in srgb,var(--off) 12%,transparent);color:var(--off)}
+.issues li.warn{background:color-mix(in srgb,var(--plan) 14%,transparent);color:var(--plan)}
+.issues li.ok{background:color-mix(in srgb,var(--ok) 12%,transparent);color:var(--ok)}
+.muted{color:var(--muted);font-size:14px}
+.act{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.kv{display:flex;justify-content:space-between;gap:12px;font-size:14px;padding:3px 0}
 </style>
 </head>
 <body>
 <header class="band"><div class="wrap">
   <h1>Настройка акции</h1>
-  <p>Здесь будет формирование акции: название, механика, охват, аудитория, сроки, ограничители и документ-основание. Интерфейс детально проработаем отдельно — страница пока каркасная.</p>
-  <div class="ctrl" style="display:flex;gap:12px">
+  <p>Конструктор акции: выберите механику, задайте параметры и охват — справа живой предпросмотр условия и проверка валидатором. Публикация в песочнице — коммит JSON в <code>rules/promos/</code>; форма готовит проверенный фрагмент.</p>
+  <div class="ctrl" style="display:flex;gap:12px;flex-wrap:wrap">
     <button onclick="location.href='admin.html'">← К списку акций</button>
     <button onclick="location.href='presets.html'">Пресеты механик</button>
+    <button class="chip" data-palette-toggle aria-label="Палитра">◍ Пурпурная</button>
   </div>
 </div></header>
-<main class="band"><div class="wrap panel">
-  <p><b>Что уже определено в модели акции</b> — эти поля страница будет редактировать:</p>
-  <p class="muted">название и id · механика (скидка %, скидка ₽/шт., фиксированная цена) · база расчёта (прайс или договорная цена) · охват (SKU / категория / весь ассортимент, исключения) · аудитория (клиенты / сегменты / все) · сроки действия · порог количества · приоритет · ограничители (минимальная маржа, лимит штук в заказе, бюджет) · документ ЭДО.</p>
-  <p class="muted">Пока акция задаётся JSON-файлом в <code>rules/promos/</code> — по одному файлу на приказ об акциях, с проверкой <code>npm run validate</code> и историей изменений в git.</p>
-  <div class="hint">Форма редактирования появится после согласования интерфейса. Валидация будет той же, что у валидатора правил: ошибки блокируют публикацию, предупреждения — повод присмотреться.</div>
+
+<main class="band"><div class="wrap main">
+  <section class="panel">
+    <h2 id="h-form">Акция</h2>
+
+    <h3 class="step"><b>1</b> · Название и механика</h3>
+    <label class="f">Название акции<input id="title" maxlength="120" placeholder="Например: Пятнадцатилетие: −15% на кружки"></label>
+    <div class="mechgrid" id="mechs" role="group" aria-label="Механика акции"></div>
+
+    <h3 class="step"><b>2</b> · Параметры механики</h3>
+    <div class="row">
+      <label class="f"><span id="valueLabel">Размер скидки, %</span><input id="value" type="number" min="0" step="any" value="10"></label>
+    </div>
+
+    <h3 class="step"><b>3</b> · Охват товаров</h3>
+    <label class="f">Товары<select id="scopeKind">
+      <option value="categories">Категория</option>
+      <option value="skus">Конкретные товары (SKU)</option>
+      <option value="all">Весь ассортимент</option>
+    </select></label>
+    <div id="scopeBox"></div>
+
+    <h3 class="step"><b>4</b> · Аудитория</h3>
+    <label class="f">Кому<select id="audKind">
+      <option value="all">Все клиенты</option>
+      <option value="segments">Сегмент</option>
+      <option value="customers">Конкретные клиенты</option>
+    </select></label>
+    <div id="audBox"></div>
+
+    <h3 class="step"><b>5</b> · Сроки и порог</h3>
+    <div class="row">
+      <label class="f">Начало<input id="from" type="date"></label>
+      <label class="f">Окончание<input id="to" type="date"></label>
+      <label class="f">Порог количества, шт. (0 — без порога)<input id="minQty" type="number" min="0" step="1" value="0"></label>
+    </div>
+
+    <h3 class="step"><b>6</b> · Ограничители</h3>
+    <div class="row">
+      <label class="f">Мин. маржа, % (пусто — нет)<input id="minMargin" type="number" min="0" max="99" step="any" placeholder="напр. 5"></label>
+      <label class="f">Лимит шт./заказ (пусто — нет)<input id="maxQty" type="number" min="1" step="1" placeholder="напр. 1000"></label>
+      <label class="f">Бюджет акции, ₽ (пусто — нет)<input id="budget" type="number" min="0" step="any" placeholder="напр. 30000"></label>
+    </div>
+    <div class="hint">Ограничители страхуют от акции в убыток: маржа и лимит — блокирующие, бюджет — учётный (предупреждение при превышении).</div>
+  </section>
+
+  <aside class="side">
+    <div class="panel">
+      <h2 style="font-size:17px">Предпросмотр условия</h2>
+      <ul class="issues" id="issues"></ul>
+      <div class="preview" id="preview"></div>
+      <div class="act">
+        <button class="primary" id="copy">Скопировать JSON</button>
+        <button id="download">Скачать фрагмент</button>
+      </div>
+      <div class="muted" style="margin-top:10px">Фрагмент — в файл <code>rules/promos/&lt;период&gt;_&lt;название&gt;.json</code> (один файл — один приказ об акциях, поле terms). После коммита акция появится в списках.</div>
+    </div>
+    <div class="panel">
+      <h2 style="font-size:17px">Документ-основание</h2>
+      <div class="kv"><span>Приказ</span><b id="docLine">задаётся в файле приказа</b></div>
+      <div class="muted">Номер и дату приказа удобно задать один раз на весь файл — поле document в корне JSON.</div>
+    </div>
+  </aside>
 </div></main>
+
+<footer class="band" style="padding-top:0"><div class="wrap">
+  Данные вымышленные. <a href="admin.html">Управление акциями</a> · <a href="presets.html">Пресеты механик</a> · <a href="index.html">Витрина расчёта</a>
+</div></footer>
+
+<script>/*__ENGINE__*/</script>
+<script>/*__PALETTE__*/</script>
+<script>
+{
+const DATA = /*__DATA__*/null;
+const products = DATA.products;
+const customers = DATA.customers;
+const mechanics = DATA.presets.filter(m => !m.archived); // в конструкторе — только неархивные
+const byId = (id, list) => new Map(list.map(x => [x.id ?? x.sku, x])).get(id);
+
+const $ = id => document.getElementById(id);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+// Состояние формы — единственный источник правды; предпросмотр перерисовывается на каждый ввод.
+const state = {
+  title: '',
+  mechanic: mechanics[0]?.id ?? '',
+  value: 10,
+  scopeKind: 'categories',
+  scopeItems: [],
+  audKind: 'all',
+  audItems: [],
+  from: iso(new Date()),
+  to: '',
+  minQty: 0,
+  minMargin: null,
+  maxQty: null,
+  budget: null,
+};
+
+function valueLabelFor(effectType) {
+  return effectType === 'percent_off' ? 'Размер скидки, %'
+    : effectType === 'amount_off' ? 'Скидка, ₽/шт.' : 'Цена, ₽/шт.';
+}
+
+// Выбор механики: карточки с формулой; выбранная — с обводкой.
+function renderMechs() {
+  $('mechs').innerHTML = mechanics.map(m => `
+    <div class="mech ${m.archived ? 'archived' : ''}" data-id="${esc(m.id)}" role="button"
+         tabindex="0" aria-pressed="${state.mechanic === m.id}" ${m.archived ? 'aria-disabled="true"' : ''}>
+      <div class="t">${esc(m.title)}</div>
+      <div class="d">${esc(m.description)}</div>
+    </div>`).join('');
+}
+
+// Панель выбора товаров/клиентов: чекбоксы по типу охвата.
+function renderScopeBox() {
+  const kind = state.scopeKind;
+  if (kind === 'all') { $('scopeBox').innerHTML = '<div class="muted">Действует на весь ассортимент.</div>'; return; }
+  const items = kind === 'categories'
+    ? [...new Set(products.map(p => p.category))].map(c => ({ id: c, label: c }))
+    : products.map(p => ({ id: p.sku, label: `${p.name} · ${p.sku}` }));
+  $('scopeBox').innerHTML = items.map(it => `
+    <label class="chk"><input type="checkbox" data-kind="scope" data-id="${esc(it.id)}"
+      ${state.scopeItems.includes(it.id) ? 'checked' : ''}>${esc(it.label)}</label>`).join('');
+}
+
+function renderAudBox() {
+  const kind = state.audKind;
+  if (kind === 'all') { $('audBox').innerHTML = '<div class="muted">Акция адресована всем клиентам.</div>'; return; }
+  const items = kind === 'segments'
+    ? [...new Set(customers.map(c => c.segment))].map(s => ({ id: s, label: s }))
+    : customers.map(c => ({ id: c.id, label: `${c.name} · ${c.id}` }));
+  $('audBox').innerHTML = items.map(it => `
+    <label class="chk"><input type="checkbox" data-kind="aud" data-id="${esc(it.id)}"
+      ${state.audItems.includes(it.id) ? 'checked' : ''}>${esc(it.label)}</label>`).join('');
+}
+
+// Условие, которое получится из формы: без id/сроков по умолчанию — их задаёт файл.
+function buildTerm() {
+  const m = byId(state.mechanic, mechanics);
+  const effect = { type: m.effect.type };
+  if (effect.type === 'percent_off') effect.percent = state.value;
+  if (effect.type === 'amount_off') effect.amount = state.value;
+  if (effect.type === 'fixed_price') effect.price = state.value;
+  const term = {
+    title: state.title || 'Новая акция (без названия)',
+    source: 'promo',
+    mechanic: state.mechanic,
+    effect,
+  };
+  if (m.base === 'contract') term.base = 'contract';
+  if (state.scopeKind === 'all') term.scope = { all: true };
+  else if (state.scopeKind === 'categories') term.scope = { categories: state.scopeItems };
+  else term.scope = { skus: state.scopeItems };
+  if (state.audKind === 'all') term.audience = { all: true };
+  else if (state.audKind === 'segments') term.audience = { segments: state.audItems };
+  else term.audience = { customerIds: state.audItems };
+  term.validFrom = state.from;
+  if (state.to) term.validTo = state.to;
+  if (state.minQty > 0) term.minQty = state.minQty;
+  if (state.minMargin != null) term.minMargin = state.minMargin;
+  if (state.maxQty != null) term.maxQtyPerOrder = state.maxQty;
+  if (state.budget != null) term.budget = state.budget;
+  return term;
+}
+
+// Живая проверка: тот же валидатор, что и у правил в git, — surprises до публикации исключены.
+function validateDraft(term) {
+  const draft = {
+    products: new Map(products.map(p => [p.sku, p])),
+    customers: new Map(customers.map(c => [c.id, c])),
+    mechanics: new Map(DATA.presets.map(m => [m.id, m])),
+    terms: [term],
+    index: buildTermIndex([term]),
+  };
+  return validateCatalog(draft);
+}
+
+function renderPreview() {
+  const term = buildTerm();
+  const issues = validateDraft(term);
+  const errors = issues.filter(i => i.level === 'error');
+  const warns = issues.filter(i => i.level === 'warning');
+  const li = (cls, text) => `<li class="${cls}">${esc(text)}</li>`;
+  $('issues').innerHTML = (errors.length || warns.length)
+    ? [...errors.map(i => li('err', `✖ ${i.message}`)), ...warns.map(i => li('warn', `⚠ ${i.message}`))].join('')
+    : li('ok', '✔ Проверка пройдена: ошибок и предупреждений нет');
+  $('preview').textContent = JSON.stringify(term, null, 2);
+  window.__term = term; // для кнопок копирования/скачивания
+}
+
+function render() {
+  const m = byId(state.mechanic, mechanics);
+  $('valueLabel').textContent = valueLabelFor(m.effect.type);
+  $('value').value = state.value;
+  $('scopeKind').value = state.scopeKind;
+  $('audKind').value = state.audKind;
+  $('from').value = state.from;
+  $('to').value = state.to;
+  $('minQty').value = state.minQty;
+  $('minMargin').value = state.minMargin ?? '';
+  $('maxQty').value = state.maxQty ?? '';
+  $('budget').value = state.budget ?? '';
+  renderMechs();
+  renderScopeBox();
+  renderAudBox();
+  renderPreview();
+}
+
+// События
+$('title').addEventListener('input', e => { state.title = e.target.value; renderPreview(); });
+$('mechs').addEventListener('click', e => {
+  const card = e.target.closest('.mech:not(.archived)');
+  if (!card) return;
+  state.mechanic = card.dataset.id;
+  render();
+});
+$('mechs').addEventListener('keydown', e => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const card = e.target.closest('.mech:not(.archived)');
+  if (!card) return;
+  e.preventDefault();
+  state.mechanic = card.dataset.id;
+  render();
+});
+$('value').addEventListener('input', e => { state.value = Number(e.target.value) || 0; renderPreview(); });
+$('scopeKind').addEventListener('change', e => { state.scopeKind = e.target.value; state.scopeItems = []; render(); });
+$('audKind').addEventListener('change', e => { state.audKind = e.target.value; state.audItems = []; render(); });
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t.dataset?.kind === 'scope') {
+    state.scopeItems = [...document.querySelectorAll('[data-kind="scope"]:checked')].map(x => x.dataset.id);
+    renderPreview();
+  }
+  if (t.dataset?.kind === 'aud') {
+    state.audItems = [...document.querySelectorAll('[data-kind="aud"]:checked')].map(x => x.dataset.id);
+    renderPreview();
+  }
+});
+$('from').addEventListener('change', e => { state.from = e.target.value || iso(new Date()); renderPreview(); });
+$('to').addEventListener('change', e => { state.to = e.target.value; renderPreview(); });
+$('minQty').addEventListener('input', e => { state.minQty = Math.max(0, Math.round(Number(e.target.value) || 0)); renderPreview(); });
+$('minMargin').addEventListener('input', e => { state.minMargin = e.target.value === '' ? null : Number(e.target.value); renderPreview(); });
+$('maxQty').addEventListener('input', e => { state.maxQty = e.target.value === '' ? null : Math.round(Number(e.target.value)); renderPreview(); });
+$('budget').addEventListener('input', e => { state.budget = e.target.value === '' ? null : Number(e.target.value); renderPreview(); });
+
+$('copy').addEventListener('click', async () => {
+  const json = JSON.stringify(window.__term, null, 2);
+  try { await navigator.clipboard.writeText(json); $('copy').textContent = 'Скопировано ✓'; setTimeout(() => $('copy').textContent = 'Скопировать JSON', 1500); }
+  catch { $('preview').select?.(); }
+});
+$('download').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify({ terms: [window.__term] }, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${state.from}_новая-акция.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+render();
+}
+</script>
 </body>
 </html>
