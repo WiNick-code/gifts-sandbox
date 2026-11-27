@@ -40,12 +40,27 @@ export type TermEffect =
   | { type: 'amount_off'; amount: number } // скидка, руб. за единицу
   | { type: 'fixed_price'; price: number }; // фиксированная цена, руб. за единицу
 
+// Механика акции — именованный пресет параметров: «что делает акция и от чего считается».
+// Комбинаций условий немного, поэтому механики — справочник, а не свободная форма:
+// акция ссылается на механику (term.mechanic) и наследует её настройки, если не задала свои.
+export interface MechanicPreset {
+  id: string; // короткое имя-код: percent-off, fixed-price...
+  title: string;
+  description: string;
+  effect: TermEffect; // что делает: скидка %, скидка ₽/шт., фиксированная цена
+  base?: 'list' | 'contract'; // от какой цены считается
+  archived?: boolean; // в архиве: в конструкторе акции не предлагается, у существующих акций остаётся
+}
+
 // «Токен» условия: одна атомарная коммерческая договорённость.
 export interface Term {
   id: string;
   title: string;
   source: 'contract' | 'promo';
   effect: TermEffect;
+  // Механика акции, по которой создано условие (заполняется конструктором акций; для
+  // договорных условий смысла не имеет). Наследует effect/base механики, если задана.
+  mechanic?: string;
   // От какой цены считается акция: от прайсовой (по умолчанию) или от договорной клиента.
   base?: 'list' | 'contract';
   scope: { all?: boolean; skus?: string[]; categories?: string[]; excludeSkus?: string[] };
@@ -80,6 +95,7 @@ export interface Catalog {
   products: Map<string, Product>;
   customers: Map<string, Customer>;
   terms: Term[];
+  mechanics?: Map<string, MechanicPreset>; // справочник механик акций (seed/presets.json)
   index?: TermIndex; // строится загрузчиком; без него — линейный перебор (мало условий)
   disabledPromos?: ReadonlySet<string>; // id акций, принудительно отключённых из админки:
   // условия акции при этом не меняются — это слой состояния поверх правил (в бою — таблица в БД,

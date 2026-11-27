@@ -4,6 +4,7 @@ import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
+import vm from 'node:vm';
 import { loadCatalog } from '../engine/src/load.ts';
 import { buildTermIndex } from '../engine/src/terms.ts';
 
@@ -25,7 +26,12 @@ export function bundleEngine(): string {
 
 export function bundleData(): string {
   const c = loadCatalog(root);
-  const data = { products: [...c.products.values()], customers: [...c.customers.values()], terms: c.terms };
+  const data = {
+    products: [...c.products.values()],
+    customers: [...c.customers.values()],
+    terms: c.terms,
+    presets: [...(c.mechanics?.values() ?? [])],
+  };
   return JSON.stringify(data).replace(/</g, '\\u003c');
 }
 
@@ -44,11 +50,12 @@ export function buildPage(template = 'index.html'): string {
 
 // Inline-скрипты пишутся на чистом JS (typecheck их не видит) — проверяем синтаксис при сборке,
 // чтобы опечатка не дожила до браузера. Скрипты со src не трогаем: их нет, всё встраивается.
+// new Function не годится: тело-блок «{ ... }» (паттерн витрины) он парсит как выражение — vm.Script честнее.
 function checkInlineScripts(html: string, template: string): void {
   for (const code of html.match(/<script>[\s\S]*?<\/script>/g) ?? []) {
     const body = code.slice('<script>'.length, -'<\/script>'.length);
     try {
-      new Function(body);
+      new vm.Script(body, { filename: `${template} (inline script)` });
     } catch (e) {
       throw new Error(`Синтаксическая ошибка в inline-скрипте ${template}: ${(e as Error).message}`);
     }
@@ -60,13 +67,14 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   for (const [name, template] of [
     ['index.html', 'index.html'], // витрина расчёта
     ['admin.html', 'admin.html'], // админка акций
+    ['presets.html', 'presets.html'], // пресеты механик
   ]) {
     const html = buildPage(template);
     writeFileSync(join(root, 'dist', name), html);
     console.log(`dist/${name} — ${(html.length / 1024).toFixed(1)} КБ`);
   }
   // Статические страницы-каркасы (пока без движка): копируются как есть.
-  for (const name of ['promo-edit.html', 'presets.html']) {
+  for (const name of ['promo-edit.html']) {
     copyFileSync(join(root, 'web', name), join(root, 'dist', name));
     console.log(`dist/${name} — копия web/${name}`);
   }

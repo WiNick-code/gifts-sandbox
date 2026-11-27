@@ -39,3 +39,13 @@ test('админка акций собирается: метки заменен�
   // в админке — только акции, договорные условия в список не попадают
   assert.ok(html.includes('promo-ny-15'));
 });
+
+test('страница пресетов собирается: механики и конструктор на месте', () => {
+  const html = buildPage('presets.html');
+  assert.ok(html.startsWith('<!DOCTYPE html>'));
+  assert.ok(!html.includes('/*__ENGINE__*/') && !html.includes('/*__DATA__*/'));
+  assert.ok(html.includes('function mechanicStatus'));
+  assert.ok(html.includes('percent-off-contract')); // справочник встроен
+  assert.ok(html.includes('dialog')); // конструктор — модальное окно
+  assert.ok(html.includes('Новая механика'));
+});

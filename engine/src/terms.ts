@@ -1,4 +1,4 @@
-import type { Customer, ISODate, Product, Term, TermEffect, TermIndex } from './types.ts';
+import type { Customer, ISODate, MechanicPreset, Product, Term, TermEffect, TermIndex } from './types.ts';
 import { toKop } from './money.ts';
 
 export function isActive(t: Term, date: ISODate): boolean {
@@ -13,6 +13,21 @@ export function promoPhase(t: Term, date: ISODate): PromoPhase {
   if (t.validTo && t.validTo < date) return 'archived';
   if (t.validFrom > date) return 'planned';
   return 'active';
+}
+
+// Статус механики акции для страницы пресетов:
+// «в архиве» — механика выведена из оборота; «используется» — на ней созданы акции,
+// запланированные или действующие прямо сейчас; иначе — «активна» (доступна для конструктора).
+export type MechanicStatus = 'active' | 'in_use' | 'archived';
+
+export function mechanicStatus(
+  m: MechanicPreset,
+  terms: Term[],
+  date: ISODate,
+): MechanicStatus {
+  if (m.archived) return 'archived';
+  const used = terms.some((t) => t.mechanic === m.id && promoPhase(t, date) !== 'archived');
+  return used ? 'in_use' : 'active';
 }
 
 export function matchesProduct(t: Term, p: Product): boolean {

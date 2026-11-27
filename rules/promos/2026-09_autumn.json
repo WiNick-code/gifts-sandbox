@@ -1,16 +1,30 @@
 {
-  "document": { "type": "promo_order", "number": "Приказ об осенней акции СБ-2026", "date": "2026-09-10" },
+  "document": {
+    "type": "promo_order",
+    "number": "Приказ об осенней акции СБ-2026",
+    "date": "2026-09-10"
+  },
   "terms": [
     {
       "id": "promo-autumn-nb",
       "title": "Осенняя: −10% на ежедневники",
       "source": "promo",
-      "effect": { "type": "percent_off", "percent": 10 },
-      "scope": { "categories": ["Ежедневники"] },
-      "audience": { "all": true },
+      "effect": {
+        "type": "percent_off",
+        "percent": 10
+      },
+      "scope": {
+        "categories": [
+          "Ежедневники"
+        ]
+      },
+      "audience": {
+        "all": true
+      },
       "validFrom": "2026-09-15",
       "validTo": "2026-10-31",
-      "minMargin": 5
+      "minMargin": 5,
+      "mechanic": "percent-off"
     }
   ]
 }

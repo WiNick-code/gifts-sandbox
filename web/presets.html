@@ -8,39 +8,209 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@500;700&family=Red+Hat+Text:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
+/* VOICE: библиотека механик — сдержанно, но каждая карточка с характером.
+   IDEA: «полка механик»: карточки с крупной схемой эффекта, статус-огоньком и счётом акций.
+   PICTURE: сетка карточек; в карточке — схема «база → эффект», ниже — описание и где используется. */
 :root{color-scheme:light dark;
   --bg:light-dark(#f2f4f9,#070f26);--panel:light-dark(#fff,#0f1c3d);--ink:light-dark(#0b1f4b,#e8ecf7);
-  --muted:light-dark(#56617b,#9ba7c5);--line:light-dark(#dde2ee,#24335d);--band:light-dark(#0b1f4b,#0c1a3e);
-  --accent:light-dark(#e0115f,#ff4d8d);--contract:light-dark(#2453c7,#7ea4ff);--soft:light-dark(#fdeaf1,#3a1430)}
+  --muted:light-dark(#56617b,#9ba7c5);--line:light-dark(#dde2ee,#24335d);--track:light-dark(#e8ecf5,#1a2a55);
+  --band:light-dark(#0b1f4b,#0c1a3e);--accent:light-dark(#e0115f,#ff4d8d);--contract:light-dark(#2453c7,#7ea4ff);
+  --soft:light-dark(#fdeaf1,#3a1430);
+  --ok:light-dark(#157f3d,#4cc276);--plan:light-dark(#b7791f,#e2a544);--off:light-dark(#c2334d,#ff6b7f)}
 :root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Red Hat Text",system-ui,sans-serif}
-h1{font-family:"Red Hat Display",system-ui,sans-serif;font-weight:700;line-height:1.05;font-size:clamp(28px,4vw,42px);margin:0}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Red Hat Text",system-ui,sans-serif;overflow-x:clip}
+h1,h2{font-family:"Red Hat Display",system-ui,sans-serif;font-weight:700;line-height:1.05;text-wrap:balance;margin:0}
+h1{font-size:clamp(28px,4vw,42px)}
 .band{padding:clamp(24px,4vw,48px) max(5vw,16px)}
-.wrap{max-width:880px;margin:0 auto}
+.wrap{max-width:1240px;margin:0 auto}
 header.band{background:var(--band);color:#fff}
 header p{color:#c5cfe8;max-width:70ch;margin:10px 0 22px}
 button{font:inherit;font-weight:600;min-height:44px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:8px 14px;cursor:pointer}
 button:hover{border-color:var(--contract)}
 :focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:clamp(16px,2.4vw,24px)}
-.hint{margin-top:14px;font-size:14px;background:var(--soft);border-radius:8px;padding:10px 14px}
-.muted{color:var(--muted)}
+.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.primary:hover{filter:brightness(1.08);border-color:var(--accent)}
+.counts{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:14px;margin-bottom:18px;color:var(--muted)}
+.counts b{font-weight:600}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.dot-active{background:var(--ok)}.dot-in_use{background:var(--contract)}.dot-archived{background:var(--muted)}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:10px}
+.card.archived{opacity:.62}
+.badge{display:inline-block;font-size:13px;font-weight:600;border-radius:999px;padding:2px 10px;white-space:nowrap;align-self:flex-start}
+.b-active{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
+.b-in_use{background:color-mix(in srgb,var(--contract) 16%,transparent);color:var(--contract)}
+.b-archived{background:var(--track);color:var(--muted)}
+.nm{font-weight:700;font-size:18px;font-family:"Red Hat Display",system-ui,sans-serif}
+.fx{font-size:14px;color:var(--contract);font-weight:600}
+.fx .arr{color:var(--muted);font-weight:400}
+.desc{font-size:14px;color:var(--muted);flex:1}
+.usage{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:8px}
+.usage b{color:var(--ink)}
+.empty{padding:28px 0;text-align:center;color:var(--muted)}
+.muted{color:var(--muted);font-size:14px}
+/* Модальное окно конструктора механики */
+dialog{border:1px solid var(--line);border-radius:14px;padding:0;max-width:560px;width:min(560px,94vw);background:var(--panel);color:var(--ink)}
+dialog::backdrop{background:rgb(7 15 38 / .55)}
+.dlg{padding:24px}
+.dlg h2{font-size:22px;margin-bottom:6px}
+.dlg p{color:var(--muted);font-size:14px;margin:0 0 16px}
+.f{display:grid;gap:4px;font-size:13px;color:var(--muted);margin-bottom:12px}
+.f input,.f select{font:inherit;font-size:16px;min-height:44px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:8px 10px}
+.f small{color:var(--muted);font-size:12px}
+.dlg .act{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+.err{color:var(--off);font-size:13px;margin-top:8px;min-height:18px}
+footer{color:var(--muted);font-size:14px}footer a{color:var(--contract)}
 </style>
 </head>
 <body>
 <header class="band"><div class="wrap">
   <h1>Пресеты механик акций</h1>
-  <p>Конструктор уникальных параметров механики акции: типы скидок, правила суммирования, пороги и ограничители, готовые шаблоны под типовые акции. Детальное описание интерфейса — отдельно, эта страница пока каркасная.</p>
-  <div class="ctrl" style="display:flex;gap:12px">
-    <button onclick="location.href='admin.html'">← К списку акций</button>
+  <p>Механика — типовой рецепт акции: что делает скидка и от какой цены считается. Комбинаций немного, поэтому механики — закрытый справочник: акция наследует настройки своей механики. Новой акцией займёмся на странице акции — здесь управляем самими рецептами.</p>
+  <div class="ctrl" style="display:flex;gap:12px;flex-wrap:wrap">
+    <button class="primary" id="newMech">＋ Новая механика</button>
     <button onclick="location.href='promo-edit.html'">Настройка акции</button>
+    <button onclick="location.href='admin.html'">← К списку акций</button>
   </div>
 </div></header>
-<main class="band"><div class="wrap panel">
-  <p class="muted">Механики, которые движок уже поддерживает и которые станет задавать пресет: скидка в процентах, скидка в рублях за единицу, фиксированная цена · расчёт от прайса или от договорной цены («акция поверх договора») · порог количества · приоритет конфликта · ограничители: минимальная маржа, лимит штук в заказе, бюджет акции.</p>
-  <p class="muted">Открытые вопросы концепции (совмещение нескольких акций в строке, акции на корзину целиком) расширят набор механик — их проработаем позже.</p>
-  <div class="hint">Страница заработает после согласования набора пресетов. Пока механика задаётся полями условия в JSON и проверяется валидатором.</div>
+
+<main class="band"><div class="wrap">
+  <div class="counts" id="counts"></div>
+  <div class="grid" id="grid"></div>
+  <p class="muted" style="margin-top:16px">Механика «используется», пока на ней созданы запланированные или действующие акции. В архиве механика не предлагается в конструкторе новых акций, но существующие акции продолжают работать.</p>
 </div></main>
+
+<!-- Конструктор новой механики: всплывающее окно — комбинаций условий немного,
+     справочник предопределён, отдельная страница не нужна. -->
+<dialog id="dlg">
+  <form class="dlg" id="form" method="dialog">
+    <h2>Новая механика акции</h2>
+    <p>Задайте рецепт: тип эффекта и базу расчёта. Акции на этой механике наследуют настройки.</p>
+    <label class="f">Название
+      <input id="mTitle" required maxlength="80" placeholder="Например: Скидка выходного дня">
+    </label>
+    <label class="f">Тип эффекта
+      <select id="mEffect">
+        <option value="percent_off">Скидка в процентах</option>
+        <option value="amount_off">Скидка в рублях за единицу</option>
+        <option value="fixed_price">Фиксированная цена</option>
+      </select>
+    </label>
+    <label class="f"><span id="mValueLabel">Размер скидки по умолчанию, %</span>
+      <input id="mValue" type="number" min="0" step="any" value="10">
+      <small id="mValueHint">Значение по умолчанию: акция сможет задать своё.</small>
+    </label>
+    <label class="f">База расчёта
+      <select id="mBase">
+        <option value="list">От прайсовой цены</option>
+        <option value="contract">От договорной цены клиента (поверх договора)</option>
+      </select>
+    </label>
+    <label class="f">Описание
+      <input id="mDesc" maxlength="200" placeholder="Когда применять эту механику">
+    </label>
+    <div class="err" id="err"></div>
+    <div class="act">
+      <button type="button" id="cancel">Отмена</button>
+      <button type="submit" class="primary">Создать механику</button>
+    </div>
+  </form>
+</dialog>
+
+<footer class="band" style="padding-top:0"><div class="wrap">
+  Данные вымышленные. <a href="admin.html">Управление акциями</a> · <a href="index.html">Витрина расчёта</a> · <a href="https://github.com/WiNick-code/gifts-sandbox">github.com/WiNick-code/gifts-sandbox</a>
+</div></footer>
+
+<script>/*__ENGINE__*/</script>
+<script>
+{
+const DATA = /*__DATA__*/null;
+const mechanics = DATA.presets;
+const promos = DATA.terms.filter(t => t.source === 'promo');
+
+const $ = id => document.getElementById(id);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+const ST = { active: 'Активна', in_use: 'Используется', archived: 'В архиве' };
+const DOT = { active: 'dot-active', in_use: 'dot-in_use', archived: 'dot-archived' };
+
+const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const today = iso(new Date());
+
+// Короткая схема эффекта: «прайс → −N%», «договор → −N ₽/шт.»...
+const fxText = m => {
+  const base = m.base === 'contract' ? 'договорная' : 'прайсовая';
+  const e = m.effect;
+  const fx = e.type === 'percent_off' ? `−${e.percent}%`
+    : e.type === 'amount_off' ? `−${e.amount} ₽/шт.`
+    : `= ${e.price} ₽/шт.`;
+  return `${base} <span class="arr">→</span> ${fx}`;
+};
+
+// Какие акции стоят на этой механике (для карточки)
+const promosOf = id => promos.filter(t => t.mechanic === id);
+
+function render() {
+  const counts = { active: 0, in_use: 0, archived: 0 };
+  for (const m of mechanics) counts[mechanicStatus(m, DATA.terms, today)]++;
+  $('counts').innerHTML = Object.entries(ST).map(([k, label]) =>
+    `<span><span class="dot ${DOT[k]}"></span>${label}: <b>${counts[k]}</b></span>`).join('');
+
+  $('grid').innerHTML = mechanics.map(m => {
+    const st = mechanicStatus(m, DATA.terms, today);
+    const used = promosOf(m.id);
+    const usedNow = used.filter(t => promoPhase(t, today) !== 'archived');
+    const usage = used.length
+      ? (usedNow.length
+          ? `Акций: <b>${usedNow.length}</b> (${usedNow.map(t => esc(t.title)).join(', ')})`
+          : `Акций нет — все в архиве`)
+      : 'Ещё не использовалась';
+    return `<article class="card ${st === 'archived' ? 'archived' : ''}">
+      <span class="badge b-${st}"><span class="dot ${DOT[st]}"></span>${ST[st]}</span>
+      <div class="nm">${esc(m.title)}</div>
+      <div class="fx">${fxText(m)}</div>
+      <div class="desc">${esc(m.description)}</div>
+      <div class="usage">${usage} · код: <b>${esc(m.id)}</b></div>
+    </article>`;
+  }).join('');
+}
+
+// Конструктор новой механики — модальное окно
+const dlg = $('dlg');
+$('newMech').addEventListener('click', () => { $('err').textContent = ''; dlg.showModal(); });
+$('cancel').addEventListener('click', () => dlg.close());
+$('mEffect').addEventListener('change', e => {
+  const v = e.target.value;
+  $('mValueLabel').textContent =
+    v === 'percent_off' ? 'Размер скидки по умолчанию, %'
+    : v === 'amount_off' ? 'Скидка по умолчанию, ₽/шт.'
+    : 'Цена по умолчанию, ₽/шт.';
+});
+$('form').addEventListener('submit', e => {
+  // В песочнице справочник статичен (seed/presets.json в git) — окно проверяет корректность
+  // рецепта и показывает, JSON-фрагмент какой механики получился: это заготовка для коммита.
+  e.preventDefault();
+  const value = Number($('mValue').value);
+  if (!(value >= 0)) { $('err').textContent = 'Значение должно быть неотрицательным числом.'; return; }
+  const effect = { type: $('mEffect').value };
+  if (effect.type === 'percent_off') effect.percent = value;
+  if (effect.type === 'amount_off') effect.amount = value;
+  if (effect.type === 'fixed_price') effect.price = value;
+  const draft = {
+    id: $('mTitle').value.trim().toLowerCase().replace(/[^a-z0-9а-яё]+/gi, '-').replace(/^-+|-+$/g, '') || 'new-mechanic',
+    title: $('mTitle').value.trim(),
+    description: $('mDesc').value.trim() || 'Описание не задано.',
+    effect,
+    base: $('mBase').value,
+  };
+  const json = JSON.stringify(draft, null, 2);
+  $('err').innerHTML = '';
+  dlg.close();
+  // Показываем готовый фрагмент для seed/presets.json — механики живут в git, как и правила.
+  alert(`Механика «${draft.title}» проверена. Добавьте в seed/presets.json:\n\n${json}\n\nи закоммитьте — после сборки она появится в справочнике.`);
+});
+render();
+}
+</script>
 </body>
 </html>

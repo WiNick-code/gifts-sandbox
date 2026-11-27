@@ -2,7 +2,7 @@
 // поэтому его же можно будет запускать в браузере и на сервере.
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import type { Catalog, Customer, DocumentRef, Product, Term } from './types.ts';
+import type { Catalog, Customer, DocumentRef, MechanicPreset, Product, Term } from './types.ts';
 import { buildTermIndex } from './terms.ts';
 
 interface RuleFile {
@@ -43,6 +43,7 @@ export function checkMapping(mapping: MappingFile, products: Product[]): void {
 export function loadCatalog(root: string): Catalog {
   const products = readJson<Product[]>(join(root, 'seed/products.json'));
   const customers = readJson<Customer[]>(join(root, 'seed/customers.json'));
+  const mechanics = readJson<MechanicPreset[]>(join(root, 'seed/presets.json'));
   const mapping = readJson<MappingFile>(join(root, 'seed/1c-mapping.json'));
   checkMapping(mapping, products);
 
@@ -50,12 +51,15 @@ export function loadCatalog(root: string): Catalog {
   for (const file of listJson(join(root, 'rules'))) {
     const data = readJson<RuleFile>(file);
     for (const t of data.terms ?? []) {
+      if (t.mechanic && !mechanics.some((m) => m.id === t.mechanic))
+        throw new Error(`Условие «${t.id}» ссылается на неизвестную механику «${t.mechanic}» (${file})`);
       terms.push({ ...t, document: t.document ?? data.document, origin: relative(root, file) });
     }
   }
   return {
     products: new Map(products.map((p) => [p.sku, p])),
     customers: new Map(customers.map((c) => [c.id, c])),
+    mechanics: new Map(mechanics.map((m) => [m.id, m])),
     terms,
     index: buildTermIndex(terms),
   };

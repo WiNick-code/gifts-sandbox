@@ -214,7 +214,7 @@ function render() {
     const act = st === 'archived'
       ? '<span class="muted">—</span>'
       : st === 'off'
-        ? `<button class="b-enable" data-act="on" data-id="${esc(t.id)}">↩ Включить повторно</button>`
+        ? `<button class="b-enable" data-act="on" data-id="${esc(t.id)}">↩ Включить</button>`
         : `<button class="b-disable" data-act="off" data-id="${esc(t.id)}">✕ Отключить</button>`;
     return `<tr class="${st === 'off' || st === 'archived' ? 'off' : ''}">
       <td><span class="badge b-${st}"><span class="dot ${DOT[st]}"></span>${ST[st]}</span></td>
