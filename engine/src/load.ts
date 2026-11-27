@@ -23,6 +23,8 @@ function listJson(dir: string): string[] {
   return readdirSync(dir)
     .sort()
     .flatMap((name) => {
+      // «._*» — служебные файлы macOS (AppleDouble): на внешних дисках плодятся рядом с настоящими.
+      if (name.startsWith('._')) return [];
       const p = join(dir, name);
       if (statSync(p).isDirectory()) return listJson(p);
       return name.endsWith('.json') ? [p] : [];

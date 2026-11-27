@@ -135,7 +135,7 @@ pre,.scroll{overflow-x:auto}.scroll a{flex:none}code{overflow-wrap:anywhere}html
 </div></section>
 
 <footer class="band" style="padding-top:0"><div class="wrap">
-  Клиенты, товары, цены и документы вымышленные. Код и правила — <a href="https://github.com/WiNick-code/gifts-sandbox">github.com/WiNick-code/gifts-sandbox</a>.
+  Клиенты, товары, цены и документы вымышленные. Код и правила — <a href="https://github.com/WiNick-code/gifts-sandbox">github.com/WiNick-code/gifts-sandbox</a> · <a href="admin.html">Управление акциями</a>
 </div></footer>
 
 <script>/*__ENGINE__*/</script>
@@ -147,6 +147,11 @@ const catalog = {
   customers: new Map(DATA.customers.map(c => [c.id, c])),
   terms: DATA.terms,
 };
+// Ручное отключение акций из админки (web/admin.html) действует и в витрине:
+// состояние живёт в localStorage, при изменении в другой вкладке — пересчёт.
+const OFF_KEY = 'gifts.promo-off';
+const loadOff = () => { try { return new Set(JSON.parse(localStorage.getItem(OFF_KEY) ?? '[]')); } catch { return new Set(); } };
+catalog.disabledPromos = loadOff();
 const termById = new Map(DATA.terms.map(t => [t.id, t]));
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
@@ -290,6 +295,8 @@ function render() {
 
 // События
 $('cust').addEventListener('change', e => { state.customerId = e.target.value; $('limitBox').innerHTML = ''; render(); });
+// Акцию выключили в адмике в другой вкладке — пересчитываем корзину не дожидаясь перезагрузки.
+window.addEventListener('storage', e => { if (e.key === OFF_KEY) { catalog.disabledPromos = loadOff(); render(); } });
 $('date').addEventListener('change', e => { if (e.target.value) { state.date = e.target.value; render(); } });
 $('presets').addEventListener('click', e => { const b = e.target.closest('[data-d]'); if (b) { state.date = b.dataset.d; render(); } });
 $('onlyMine').addEventListener('change', render);

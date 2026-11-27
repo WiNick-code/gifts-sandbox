@@ -1,6 +1,6 @@
-// Сборка демо-страницы: ядро движка + данные встраиваются в один самодостаточный HTML.
-// node scripts/build-web.ts  →  dist/index.html
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+// Сборка демо-страниц: ядро движка + данные встраиваются в каждый самодостаточный HTML.
+// node scripts/build-web.ts  →  dist/index.html, dist/admin.html (+ статические страницы)
+import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
@@ -29,21 +29,45 @@ export function bundleData(): string {
   return JSON.stringify(data).replace(/</g, '\\u003c');
 }
 
-export function buildPage(): string {
-  const tpl = readFileSync(join(root, 'web/index.html'), 'utf8');
-  if (!tpl.includes('/*__ENGINE__*/') || !tpl.includes('/*__DATA__*/null')) throw new Error('В шаблоне нет меток сборки');
-  return (
-    tpl
-      .replace('/*__ENGINE__*/', () => bundleEngine())
-      .replace('/*__DATA__*/null', () => bundleData())
-      // В браузере нет загрузчика с диска — индекс условий строится на встроенных данных.
-      .replace('terms: DATA.terms', 'terms: DATA.terms, index: buildTermIndex(DATA.terms)')
-  );
+// Страница с движком: витрина (index.html) и админка акций (admin.html) собираются одинаково.
+export function buildPage(template = 'index.html'): string {
+  const tpl = readFileSync(join(root, 'web', template), 'utf8');
+  if (!tpl.includes('/*__ENGINE__*/') || !tpl.includes('/*__DATA__*/null')) throw new Error(`В шаблоне ${template} нет меток сборки`);
+  const html = tpl
+    .replace('/*__ENGINE__*/', () => bundleEngine())
+    .replace('/*__DATA__*/null', () => bundleData())
+    // В браузере нет загрузчика с диска — индекс условий строится на встроенных данных.
+    .replace('terms: DATA.terms', 'terms: DATA.terms, index: buildTermIndex(DATA.terms)');
+  checkInlineScripts(html, template);
+  return html;
+}
+
+// Inline-скрипты пишутся на чистом JS (typecheck их не видит) — проверяем синтаксис при сборке,
+// чтобы опечатка не дожила до браузера. Скрипты со src не трогаем: их нет, всё встраивается.
+function checkInlineScripts(html: string, template: string): void {
+  for (const code of html.match(/<script>[\s\S]*?<\/script>/g) ?? []) {
+    const body = code.slice('<script>'.length, -'<\/script>'.length);
+    try {
+      new Function(body);
+    } catch (e) {
+      throw new Error(`Синтаксическая ошибка в inline-скрипте ${template}: ${(e as Error).message}`);
+    }
+  }
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   mkdirSync(join(root, 'dist'), { recursive: true });
-  const html = buildPage();
-  writeFileSync(join(root, 'dist/index.html'), html);
-  console.log(`dist/index.html — ${(html.length / 1024).toFixed(1)} КБ`);
+  for (const [name, template] of [
+    ['index.html', 'index.html'], // витрина расчёта
+    ['admin.html', 'admin.html'], // админка акций
+  ]) {
+    const html = buildPage(template);
+    writeFileSync(join(root, 'dist', name), html);
+    console.log(`dist/${name} — ${(html.length / 1024).toFixed(1)} КБ`);
+  }
+  // Статические страницы-каркасы (пока без движка): копируются как есть.
+  for (const name of ['promo-edit.html', 'presets.html']) {
+    copyFileSync(join(root, 'web', name), join(root, 'dist', name));
+    console.log(`dist/${name} — копия web/${name}`);
+  }
 }

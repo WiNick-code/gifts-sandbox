@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Управление акциями — песочница</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@500;700&family=Red+Hat+Text:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE: рабочий инструмент маркетолога — контроль над акциями, ничего лишнего.
+   IDEA: «пульт акций»: слева статус-огонёк каждой акции, справа тумблер вкл/выкл.
+   COLOUR and TYPE: как у витрины — оксфордский синий, панели, Red Hat; статусы: зелёный/синий/красный/серый. */
+:root{color-scheme:light dark;
+  --bg:light-dark(#f2f4f9,#070f26);--panel:light-dark(#fff,#0f1c3d);--ink:light-dark(#0b1f4b,#e8ecf7);
+  --muted:light-dark(#56617b,#9ba7c5);--line:light-dark(#dde2ee,#24335d);--track:light-dark(#e8ecf5,#1a2a55);
+  --band:light-dark(#0b1f4b,#0c1a3e);--accent:light-dark(#e0115f,#ff4d8d);--contract:light-dark(#2453c7,#7ea4ff);
+  --soft:light-dark(#fdeaf1,#3a1430);
+  --ok:light-dark(#157f3d,#4cc276);--plan:light-dark(#b7791f,#e2a544);--off:light-dark(#c2334d,#ff6b7f)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Red Hat Text",system-ui,sans-serif;overflow-x:clip}
+h1,h2,h3{font-family:"Red Hat Display",system-ui,sans-serif;font-weight:700;line-height:1.05;text-wrap:balance;margin:0}
+h1{font-size:clamp(28px,4vw,42px)}h2{font-size:24px;margin-bottom:14px}
+.band{padding:clamp(24px,4vw,48px) max(5vw,16px)}
+.wrap{max-width:1240px;margin:0 auto}
+header.band{background:var(--band);color:#fff}
+header p{color:#c5cfe8;max-width:70ch;margin:10px 0 22px}
+.ctrl{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:end}
+label.f{display:grid;gap:4px;font-size:13px;color:#c5cfe8}
+select,input{font:inherit;font-size:16px;min-height:44px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:8px 10px}
+header select,header input{border-color:#3a4f86;background:#13285c;color:#fff}
+button{font:inherit;font-weight:600;min-height:44px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:8px 14px;cursor:pointer}
+button:hover{border-color:var(--contract)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:44px;background:transparent;color:#fff;border-color:#3a4f86;font-weight:500;font-size:14px}
+.chip[aria-pressed=true]{background:#fff;color:#0b1f4b;border-color:#fff}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:clamp(16px,2.4vw,24px)}
+.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.primary:hover{filter:brightness(1.08);border-color:var(--accent)}
+.muted{color:var(--muted);font-size:14px}
+.filters{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:end;margin-bottom:18px}
+.filters label.f{color:var(--muted)}
+.filters select,.filters input{min-height:40px}
+.counts{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:14px;margin-bottom:14px;color:var(--muted)}
+.counts b{font-weight:600}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.dot-active{background:var(--ok)}.dot-planned{background:var(--plan)}.dot-off{background:var(--off)}.dot-archived{background:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-weight:600;color:var(--muted);font-size:13px;border-bottom:1px solid var(--line);padding:8px}
+th[data-sort]{cursor:pointer;user-select:none;white-space:nowrap}
+th[data-sort]:hover{color:var(--ink)}
+th .arr{color:var(--accent)}
+td{border-bottom:1px solid var(--line);padding:12px 8px;vertical-align:top}
+tr.off td{color:var(--muted)}
+.badge{display:inline-block;font-size:13px;font-weight:600;border-radius:999px;padding:2px 10px;white-space:nowrap}
+.b-active{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
+.b-planned{background:color-mix(in srgb,var(--plan) 18%,transparent);color:var(--plan)}
+.b-off{background:color-mix(in srgb,var(--off) 14%,transparent);color:var(--off)}
+.b-archived{background:var(--track);color:var(--muted)}
+.nm{font-weight:600}.sku{color:var(--muted);font-size:13px}
+.guards{font-size:13px;color:var(--muted)}
+.act{display:flex;gap:8px;flex-wrap:wrap}
+.act button{min-height:38px;padding:4px 12px;font-size:14px;white-space:nowrap}
+.b-disable{border-color:color-mix(in srgb,var(--off) 40%,var(--line));color:var(--off)}
+.b-enable{border-color:color-mix(in srgb,var(--ok) 45%,var(--line));color:var(--ok)}
+.empty{padding:28px 0;text-align:center;color:var(--muted)}
+.hint{margin-top:14px;font-size:14px;background:var(--soft);border-radius:8px;padding:10px 14px}
+footer{color:var(--muted);font-size:14px}footer a{color:var(--contract)}
+@media(max-width:720px){th:nth-child(4),td:nth-child(4),th:nth-child(6),td:nth-child(6){display:none}}
+</style>
+</head>
+<body>
+<header class="band"><div class="wrap">
+  <h1>Управление акциями</h1>
+  <p>Включённые, запланированные и завершённые акции. Ручное отключение не меняет условия акции — только её участие в расчёте; повторное включение возвращает всё как было.</p>
+  <div class="ctrl">
+    <button class="primary" onclick="location.href='promo-edit.html'">＋ Добавить акцию</button>
+    <button onclick="location.href='presets.html'">Пресеты механик</button>
+    <button onclick="location.href='index.html'">К витрине расчёта</button>
+  </div>
+</div></header>
+
+<main class="band"><div class="wrap panel">
+  <div class="filters">
+    <label class="f">Показать с<input id="from" type="date"></label>
+    <label class="f">по<input id="to" type="date"></label>
+    <div class="chips" id="presets" role="group" aria-label="Быстрый выбор диапазона"></div>
+    <label class="f">Сортировка<select id="sortBy">
+      <option value="title">по названию акции</option>
+      <option value="start">по дате начала</option>
+    </select></label>
+    <button id="dir" aria-label="Направление сортировки">↑</button>
+  </div>
+  <div class="counts" id="counts"></div>
+  <table><thead><tr>
+    <th>Статус</th>
+    <th data-sort="title">Акция <span class="arr" id="arr-title"></span></th>
+    <th>Механика</th>
+    <th>Товары</th>
+    <th>Кому</th>
+    <th data-sort="start">Срок <span class="arr" id="arr-start"></span></th>
+    <th>Ограничители</th>
+    <th>Документ</th>
+    <th>Действия</th>
+  </tr></thead><tbody id="rows"></tbody></table>
+  <div class="hint">Ручное отключение в песочнице хранится в этом браузере (localStorage) и сразу действует в витрине расчёта. В боевой системе состояние включённости живёт в БД — условия акции при этом тоже не меняются.</div>
+</div></main>
+
+<footer class="band" style="padding-top:0"><div class="wrap">
+  Данные вымышленные. <a href="index.html">Витрина расчёта</a> · <a href="https://github.com/WiNick-code/gifts-sandbox">github.com/WiNick-code/gifts-sandbox</a>
+</div></footer>
+
+<script>/*__ENGINE__*/</script>
+<script>
+{
+const DATA = /*__DATA__*/null;
+const products = new Map(DATA.products.map(p => [p.sku, p]));
+const customers = new Map(DATA.customers.map(c => [c.id, c]));
+// Только акции: условия договора — не акции, в управлении акциями их нет.
+const promos = DATA.terms.filter(t => t.source === 'promo');
+const OFF_KEY = 'gifts.promo-off';
+
+const $ = id => document.getElementById(id);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+const fd = d => d ? d.split('-').reverse().join('.') : '';
+const rub = n => formatRub(n);
+const SEG = { agency: 'агентства', reseller: 'дилеры', corporate: 'корпоративные' };
+const ST = { active: 'Включена', planned: 'Запланирована', off: 'Выключена', archived: 'Архив' };
+const DOT = { active: 'dot-active', planned: 'dot-planned', off: 'dot-off', archived: 'dot-archived' };
+
+const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const todayISO = () => iso(new Date());
+const plusMonths = (isoDate, m) => { const [y, mo, d] = isoDate.split('-').map(Number); const dt = new Date(y, mo - 1 + m, d); return iso(dt); };
+
+// Состояние ручного отключения — слой поверх условий, сами условия не трогаем.
+const loadOff = () => { try { return new Set(JSON.parse(localStorage.getItem(OFF_KEY) ?? '[]')); } catch { return new Set(); } };
+const saveOff = s => localStorage.setItem(OFF_KEY, JSON.stringify([...s]));
+let off = loadOff();
+
+const state = {
+  from: todayISO(),
+  to: plusMonths(todayISO(), 12), // по умолчанию — ближайшие 12 месяцев
+  preset: 'year',
+  sortBy: 'title',
+  dir: 1,
+};
+
+// Статус акции: архив важнее ручного отключения (срок прошёл — ручное уже неактуально),
+// ручное отключение перекрывает плановый статус («запланирована, но принудительно выключена»).
+function statusOf(t, date) {
+  const phase = promoPhase(t, date);
+  if (phase === 'archived') return 'archived';
+  if (off.has(t.id)) return 'off';
+  return phase; // planned | active
+}
+
+const scopeText = s => {
+  const parts = [];
+  if (s.all) parts.push('весь ассортимент');
+  if (s.categories?.length) parts.push(s.categories.map(c => `«${c}»`).join(', '));
+  if (s.skus?.length) parts.push(s.skus.map(k => products.get(k)?.name ?? k).join(', '));
+  if (s.excludeSkus?.length) parts.push('кроме ' + s.excludeSkus.join(', '));
+  return parts.join('; ');
+};
+const audText = a => a.all ? 'все клиенты' : [
+  ...(a.customerIds ?? []).map(id => customers.get(id)?.name ?? id),
+  ...(a.segments ?? []).map(s => 'сегмент: ' + (SEG[s] ?? s)),
+].join('; ');
+const guardsText = t => [
+  t.minMargin != null ? `маржа ≥ ${t.minMargin}%` : '',
+  t.maxQtyPerOrder != null ? `до ${t.maxQtyPerOrder} шт./заказ` : '',
+  t.budget != null ? `бюджет ${rub(t.budget)}` : '',
+].filter(Boolean).join('; ');
+
+// В список попадают акции, чей срок пересекается с выбранным диапазоном
+// (бессрочная — если началась не позже конца диапазона).
+const inRange = (t, from, to) => t.validFrom <= to && (!t.validTo || t.validTo >= from);
+
+const PRESETS = [
+  ['year', 'Год вперёд', () => [todayISO(), plusMonths(todayISO(), 12)]],
+  ['back', 'Прошлый год', () => [plusMonths(todayISO(), -12), plusMonths(todayISO(), 12)]],
+  ['all', 'Всё время', () => ['2020-01-01', '2030-12-31']],
+];
+
+function render() {
+  $('from').value = state.from;
+  $('to').value = state.to;
+  $('sortBy').value = state.sortBy;
+  $('dir').textContent = state.dir === 1 ? '↑' : '↓';
+  $('arr-title').textContent = state.sortBy === 'title' ? (state.dir === 1 ? '↑' : '↓') : '';
+  $('arr-start').textContent = state.sortBy === 'start' ? (state.dir === 1 ? '↑' : '↓') : '';
+  for (const b of $('presets').children) b.setAttribute('aria-pressed', String(b.dataset.p === state.preset));
+
+  const today = todayISO();
+  const list = promos
+    .filter(t => inRange(t, state.from, state.to))
+    .sort((a, b) => {
+      const k = state.sortBy === 'title'
+        ? a.title.localeCompare(b.title, 'ru') || a.id.localeCompare(b.id)
+        : a.validFrom.localeCompare(b.validFrom) || a.title.localeCompare(b.title, 'ru');
+      return state.dir * k;
+    });
+
+  const counts = { active: 0, planned: 0, off: 0, archived: 0 };
+  for (const t of list) counts[statusOf(t, today)]++;
+  $('counts').innerHTML = Object.entries(ST).map(([k, label]) =>
+    `<span><span class="dot ${DOT[k]}"></span>${label}: <b>${counts[k]}</b></span>`).join('');
+
+  $('rows').innerHTML = list.length ? list.map(t => {
+    const st = statusOf(t, today);
+    const extra = [t.minQty ? `от ${t.minQty} шт.` : '', t.base === 'contract' ? 'поверх договора' : ''].filter(Boolean).join(', ');
+    const act = st === 'archived'
+      ? '<span class="muted">—</span>'
+      : st === 'off'
+        ? `<button class="b-enable" data-act="on" data-id="${esc(t.id)}">↩ Включить повторно</button>`
+        : `<button class="b-disable" data-act="off" data-id="${esc(t.id)}">✕ Отключить</button>`;
+    return `<tr class="${st === 'off' || st === 'archived' ? 'off' : ''}">
+      <td><span class="badge b-${st}"><span class="dot ${DOT[st]}"></span>${ST[st]}</span></td>
+      <td><span class="nm">${esc(t.title)}</span><br><span class="sku">${esc(t.id)}</span></td>
+      <td>${esc(describeEffect(t.effect))}${extra ? `<br><span class="sku">${esc(extra)}</span>` : ''}</td>
+      <td>${esc(scopeText(t.scope))}</td>
+      <td>${esc(audText(t.audience))}</td>
+      <td style="white-space:nowrap">${fd(t.validFrom)} — ${t.validTo ? fd(t.validTo) : 'бессрочно'}</td>
+      <td class="guards">${esc(guardsText(t)) || '—'}</td>
+      <td>${t.document ? esc(`${t.document.number} от ${fd(t.document.date)}`) : '—'}</td>
+      <td><div class="act">${act}</div></td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="9" class="empty">В выбранном диапазоне акций нет — измените диапазон дат.</td></tr>`;
+}
+
+// Диапазон и сортировка
+$('from').addEventListener('change', e => { if (e.target.value) { state.from = e.target.value; state.preset = ''; render(); } });
+$('to').addEventListener('change', e => { if (e.target.value) { state.to = e.target.value; state.preset = ''; render(); } });
+$('presets').innerHTML = PRESETS.map(([p, label]) => `<button class="chip" data-p="${p}">${esc(label)}</button>`).join('');
+$('presets').addEventListener('click', e => {
+  const b = e.target.closest('[data-p]');
+  if (!b) return;
+  const p = PRESETS.find(([key]) => key === b.dataset.p);
+  if (!p) return;
+  [state.from, state.to] = p[2]();
+  state.preset = p[0];
+  render();
+});
+$('sortBy').addEventListener('change', e => { state.sortBy = e.target.value; render(); });
+$('dir').addEventListener('click', () => { state.dir *= -1; render(); });
+document.querySelectorAll('th[data-sort]').forEach(th =>
+  th.addEventListener('click', () => {
+    const key = th.dataset.sort;
+    if (state.sortBy === key) state.dir *= -1; else { state.sortBy = key; state.dir = 1; }
+    render();
+  }));
+
+// Ручное включение/отключение — меняется только слой состояния, не условия акции.
+document.addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]');
+  if (!b) return;
+  if (b.dataset.act === 'off') off.add(b.dataset.id);
+  if (b.dataset.act === 'on') off.delete(b.dataset.id);
+  saveOff(off);
+  render();
+});
+
+render();
+}
+</script>
+</body>
+</html>

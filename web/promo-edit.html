@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Настройка акции — песочница</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@500;700&family=Red+Hat+Text:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:light dark;
+  --bg:light-dark(#f2f4f9,#070f26);--panel:light-dark(#fff,#0f1c3d);--ink:light-dark(#0b1f4b,#e8ecf7);
+  --muted:light-dark(#56617b,#9ba7c5);--line:light-dark(#dde2ee,#24335d);--band:light-dark(#0b1f4b,#0c1a3e);
+  --accent:light-dark(#e0115f,#ff4d8d);--contract:light-dark(#2453c7,#7ea4ff);--soft:light-dark(#fdeaf1,#3a1430)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Red Hat Text",system-ui,sans-serif}
+h1{font-family:"Red Hat Display",system-ui,sans-serif;font-weight:700;line-height:1.05;font-size:clamp(28px,4vw,42px);margin:0}
+.band{padding:clamp(24px,4vw,48px) max(5vw,16px)}
+.wrap{max-width:880px;margin:0 auto}
+header.band{background:var(--band);color:#fff}
+header p{color:#c5cfe8;max-width:70ch;margin:10px 0 22px}
+button{font:inherit;font-weight:600;min-height:44px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:8px 14px;cursor:pointer}
+button:hover{border-color:var(--contract)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:clamp(16px,2.4vw,24px)}
+.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.hint{margin-top:14px;font-size:14px;background:var(--soft);border-radius:8px;padding:10px 14px}
+.muted{color:var(--muted)}
+</style>
+</head>
+<body>
+<header class="band"><div class="wrap">
+  <h1>Настройка акции</h1>
+  <p>Здесь будет формирование акции: название, механика, охват, аудитория, сроки, ограничители и документ-основание. Интерфейс детально проработаем отдельно — страница пока каркасная.</p>
+  <div class="ctrl" style="display:flex;gap:12px">
+    <button onclick="location.href='admin.html'">← К списку акций</button>
+    <button onclick="location.href='presets.html'">Пресеты механик</button>
+  </div>
+</div></header>
+<main class="band"><div class="wrap panel">
+  <p><b>Что уже определено в модели акции</b> — эти поля страница будет редактировать:</p>
+  <p class="muted">название и id · механика (скидка %, скидка ₽/шт., фиксированная цена) · база расчёта (прайс или договорная цена) · охват (SKU / категория / весь ассортимент, исключения) · аудитория (клиенты / сегменты / все) · сроки действия · порог количества · приоритет · ограничители (минимальная маржа, лимит штук в заказе, бюджет) · документ ЭДО.</p>
+  <p class="muted">Пока акция задаётся JSON-файлом в <code>rules/promos/</code> — по одному файлу на приказ об акциях, с проверкой <code>npm run validate</code> и историей изменений в git.</p>
+  <div class="hint">Форма редактирования появится после согласования интерфейса. Валидация будет той же, что у валидатора правил: ошибки блокируют публикацию, предупреждения — повод присмотреться.</div>
+</div></main>
+</body>
+</html>

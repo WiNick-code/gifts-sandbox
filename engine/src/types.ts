@@ -81,6 +81,9 @@ export interface Catalog {
   customers: Map<string, Customer>;
   terms: Term[];
   index?: TermIndex; // строится загрузчиком; без него — линейный перебор (мало условий)
+  disabledPromos?: ReadonlySet<string>; // id акций, принудительно отключённых из админки:
+  // условия акции при этом не меняются — это слой состояния поверх правил (в бою — таблица в БД,
+  // в песочнице — localStorage браузера админа, см. web/admin.html)
 }
 
 export type CandidateStatus = 'applied' | 'rejected' | 'not_eligible' | 'limit';

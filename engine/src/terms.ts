@@ -5,6 +5,16 @@ export function isActive(t: Term, date: ISODate): boolean {
   return t.validFrom <= date && (!t.validTo || date <= t.validTo);
 }
 
+// Фаза акции по срокам (без учёта ручного отключения — его админка складывает поверх):
+// «запланирована» / «действует» / «архив» (срок проведения прошёл).
+export type PromoPhase = 'planned' | 'active' | 'archived';
+
+export function promoPhase(t: Term, date: ISODate): PromoPhase {
+  if (t.validTo && t.validTo < date) return 'archived';
+  if (t.validFrom > date) return 'planned';
+  return 'active';
+}
+
 export function matchesProduct(t: Term, p: Product): boolean {
   const s = t.scope;
   if (s.excludeSkus?.includes(p.sku)) return false;

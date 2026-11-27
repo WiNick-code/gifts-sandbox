@@ -22,9 +22,20 @@ test('собранное для браузера ядро считает так 
 });
 
 test('страница собирается: метки заменены, данные встроены', () => {
-  const html = buildPage();
+  const html = buildPage('index.html');
   assert.ok(html.startsWith('<!DOCTYPE html>'));
   assert.ok(!html.includes('/*__ENGINE__*/') && !html.includes('/*__DATA__*/'));
   assert.ok(html.includes('function priceCart'));
+  assert.ok(html.includes('promo-ny-15'));
+});
+
+test('админка акций собирается: метки заменены, есть статусы и отключение', () => {
+  const html = buildPage('admin.html');
+  assert.ok(html.startsWith('<!DOCTYPE html>'));
+  assert.ok(!html.includes('/*__ENGINE__*/') && !html.includes('/*__DATA__*/'));
+  assert.ok(html.includes('function promoPhase'));
+  assert.ok(html.includes('gifts.promo-off'));
+  assert.ok(html.includes('promo-edit.html') && html.includes('presets.html'));
+  // в админке — только акции, договорные условия в список не попадают
   assert.ok(html.includes('promo-ny-15'));
 });

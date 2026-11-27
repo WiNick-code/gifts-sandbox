@@ -18,7 +18,8 @@ import {
  *    (более позднее допсоглашение перекрывает предыдущее).
  * 3. Каждая действующая акция считает цену от прайса или от договорной цены (поле base).
  *    Ограничители: акция не применяется ниже минимальной маржи (minMargin) и сверх
- *    лимита количества в заказе (maxQtyPerOrder).
+ *    лимита количества в заказе (maxQtyPerOrder). Принудительно отключённая из админки
+ *    акция (catalog.disabledPromos) тоже не применяется.
  * 4. Клиент получает минимальную цену из договорной и акционных. Когда акция заканчивается
  *    (или срабатывает ограничитель), она просто перестаёт быть кандидатом — цена
  *    автоматически возвращается к договорной.
@@ -76,6 +77,20 @@ export function priceLine(catalog: Catalog, customer: Customer, line: CartLine, 
   const options: Option[] = [{ kop: contractKop, term: contract ?? null, source: contract ? 'contract' : 'list' }];
 
   for (const t of eligible.filter((t) => t.source === 'promo')) {
+    // Ручное отключение из админки: акция не действует, но в объяснении строки видно, почему.
+    if (catalog.disabledPromos?.has(t.id)) {
+      candidates.push({
+        termId: t.id,
+        title: t.title,
+        source: 'promo',
+        unitPrice: null,
+        status: 'rejected',
+        reason: 'акция отключена администратором (ручное отключение)',
+        document: t.document,
+      });
+      continue;
+    }
+
     const base = t.base === 'contract' ? contractKop : listKop;
     const promoKop = applyEffect(t.effect, base);
 
